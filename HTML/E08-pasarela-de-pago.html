@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libre & Rico — Pasarela de pago (E08)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --muted:#6b7280; --shadow:0 8px 22px rgba(0,0,0,.08);
+      --primary:#2563eb; --primary-dark:#1e40af; --gray:#e5e7eb;
+      --ok-bg:#dcfce7; --ok-fg:#065f46; --err-bg:#fee2e2; --err-fg:#7f1d1d; --warn-bg:#fef3c7; --warn-fg:#78350f; --info-bg:#e0f2fe; --info-fg:#075985;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg)}
+    .container{max-width:980px;margin:40px auto;padding:0 16px}
+    h1{margin:0 0 10px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .col{flex:1 1 260px}
+    .btn{padding:12px 16px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer}
+    .btn:hover{background:var(--primary-dark)}
+    .btn.alt{background:#f3f4f6;color:#111;border:1px solid var(--gray)}
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field input,.field select{padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px}
+    .methods{display:grid;grid-template-columns:1fr;gap:10px}
+    .method{padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa;cursor:pointer;text-align:center}
+    .method.active{outline:2px solid var(--primary);background:#eff6ff}
+    .alert{display:none;margin-top:12px;padding:12px;border-radius:12px;font-size:14px}
+    .success{background:var(--ok-bg);color:var(--ok-fg)}
+    .error{background:var(--err-bg);color:var(--err-fg)}
+    .warn{background:var(--warn-bg);color:var(--warn-fg)}
+    .info{background:var(--info-bg);color:var(--info-fg)}
+    .box{border:1px dashed #d1d5db;border-radius:12px;background:#fff;padding:14px}
+    .pill{display:inline-block;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:4px 8px;font-size:12px;color:#111827}
+    pre{margin:6px 0 0;background:#0b1430;color:#dbeafe;border-radius:10px;padding:10px;overflow:auto;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Pasarela de pago</h1>
+    <p class="sub">Conexión a pasarela (Webpay/Servipag) mediante API y credenciales seguras. Validar respuesta antes de marcar como Pagado. Logs con <i>transaction_id</i>.</p>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div><strong>Pago del pedido <span id="order">#10100</span></strong> — <strong>Total <span id="amount">$22.500</span></strong></div>
+        <div><span class="pill">Estado: <b id="status">Pendiente de pago</b></span></div>
+      </div>
+
+      <div class="row" style="margin-top:14px">
+        <div class="col">
+          <div class="field">
+            <label>Método de pago</label>
+            <div class="methods" id="methods">
+              <div class="method active" data-method="visa">Tarjeta Visa</div>
+              <div class="method" data-method="master">Tarjeta Mastercard</div>
+              <div class="method" data-method="debit">Débito/Redcompra</div>
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px;align-items:flex-end">
+            <div class="field">
+              <label>Simular respuesta de pasarela</label>
+              <select id="simulate">
+                <option value="auto">Auto (según método)</option>
+                <option value="AUTHORIZED">AUTHORIZED</option>
+                <option value="REJECTED">REJECTED</option>
+                <option value="ERROR">ERROR</option>
+              </select>
+            </div>
+            <button id="pay" class="btn">Pagar en pasarela</button>
+          </div>
+        </div>
+
+        <div class="col">
+          <label>Retorno pasarela</label>
+          <div class="box">
+            <div id="ret">Esperando pago…</div>
+            <pre id="log"></pre>
+          </div>
+
+          <div id="ok" class="alert success">✔ Pago recibido. Pedido marcado como <b>Pagado</b>. Continúa con boleta y despacho.</div>
+          <div id="rej" class="alert error">✖ Pago rechazado. El pedido sigue <b>Pendiente de pago</b>.</div>
+          <div id="err" class="alert warn">⚠ No se pudo procesar el pago, intente nuevamente.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Datos demo
+    const ORDER_ID = 10100;
+    const keyLog = "lr:pay:logs";
+    const $ = (id)=>document.getElementById(id);
+
+    const statusEl = $("status");
+    const ret = $("ret");
+    const log = $("log");
+    const ok = $("ok"), rej=$("rej"), err=$("err");
+    const simulate = $("simulate");
+    const methods = $("methods");
+
+    function hideAlerts(){ ok.style.display="none"; rej.style.display="none"; err.style.display="none"; }
+    function genTxn(){ return "txn_"+Math.random().toString(36).slice(2,10).toUpperCase(); }
+    function nowISO(){ return new Date().toISOString(); }
+    function appendLog(entry){
+      const arr = JSON.parse(localStorage.getItem(keyLog)||"[]");
+      arr.unshift(entry);
+      localStorage.setItem(keyLog, JSON.stringify(arr.slice(0,10)));
+      log.textContent = arr.map(e=>`${e.time} | ${e.result}${e.txn?(" | "+e.txn):""}`).join("\n");
+    }
+
+    // UI método
+    let currentMethod = "visa";
+    methods.addEventListener("click",(e)=>{
+      const tile = e.target.closest(".method"); if(!tile) return;
+      methods.querySelectorAll(".method").forEach(m=>m.classList.remove("active"));
+      tile.classList.add("active");
+      currentMethod = tile.dataset.method;
+    });
+
+    // Simulación principal
+    $("pay").addEventListener("click", ()=>{
+      hideAlerts();
+      ret.textContent = "Contactando pasarela…";
+      // Demora simulada de red
+      setTimeout(()=>{
+        let result = simulate.value;
+        if(result==="auto"){
+          // Reglas de prueba: Visa -> AUTHORIZED, Mastercard -> REJECTED, Débito -> AUTHORIZED (aleatorio suave)
+          if(currentMethod==="visa") result="AUTHORIZED";
+          else if(currentMethod==="master") result="REJECTED";
+          else result = Math.random()<0.8 ? "AUTHORIZED" : "ERROR";
+        }
+
+        if(result==="AUTHORIZED"){
+          const txn = genTxn();
+          ret.textContent = `Resultado: AUTHORIZED`;
+          statusEl.textContent = "Pagado";
+          ok.style.display="block";
+          appendLog({time:nowISO(), result:"AUTHORIZED", txn});
+        }else if(result==="REJECTED"){
+          ret.textContent = `Resultado: REJECTED`;
+          statusEl.textContent = "Pendiente de pago";
+          rej.style.display="block";
+          appendLog({time:nowISO(), result:"REJECTED"});
+        }else{ // ERROR
+          ret.textContent = `Resultado: ERROR`;
+          statusEl.textContent = "Pendiente de pago";
+          err.style.display="block";
+          appendLog({time:nowISO(), result:"ERROR"});
+        }
+      }, 800);
+    });
+
+    // Cargar logs previos
+    appendLog({time:nowISO(), result:"Página lista"});
+  </script>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libre & Rico — Orden de despacho (B08)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --muted:#6b7280; --shadow:0 8px 22px rgba(0,0,0,.08);
+      --primary:#2563eb; --primary-dark:#1e40af; --gray:#e5e7eb; --ok:#16a34a; --warn:#f59e0b; --err:#dc2626;
+      --ok-bg:#dcfce7; --ok-fg:#065f46; --warn-bg:#fef3c7; --warn-fg:#78350f; --err-bg:#fee2e2; --err-fg:#7f1d1d;
+    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg)}
+    .container{max-width:980px;margin:40px auto;padding:0 16px}
+    h1{margin:0 0 10px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .box{border:1px solid #eef0f4;border-radius:12px;background:#fafafa;padding:16px;margin-bottom:12px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .btn{padding:10px 14px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer}
+    .btn:hover{background:var(--primary-dark)}
+    .btn.gray{background:#f3f4f6;color:#111;border:1px solid var(--gray)}
+    .btn.ok{background:var(--ok)}
+    .field label{display:block;margin:0 0 6px;font-size:13px}
+    .field input,.field select{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px}
+    .pill{display:inline-block;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:4px 8px;font-size:12px;color:#111827}
+    .alert{display:none;margin-top:12px;padding:12px;border-radius:12px;font-size:14px}
+    .success{background:var(--ok-bg);color:var(--ok-fg)}
+    .warn{background:var(--warn-bg);color:var(--warn-fg)}
+    .error{background:var(--err-bg);color:var(--err-fg)}
+    pre{margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.55}
+    .cols{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
+    @media (max-width:900px){.cols{grid-template-columns:1fr}}
+    .flow{font-size:12px;color:#6b7280;margin-top:8px}
+    .log{list-style:none;padding:0;margin:8px 0 0;max-height:220px;overflow:auto}
+    .log li{font-size:13px;color:#374151;padding:6px 8px;border:1px dashed #e5e7eb;border-radius:8px;background:#fff;margin-bottom:6px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Orden de despacho</h1>
+    <p class="sub">Se genera automáticamente cuando el pedido pasa a “Pagado”. Exportable/Imprimible.</p>
+
+    <div class="card">
+      <div class="box" id="paidBanner" style="display:none">
+        <div class="row" style="justify-content:space-between">
+          <strong id="paidText"></strong>
+          <span class="pill" id="paidPill"></span>
+        </div>
+      </div>
+
+      <div class="cols">
+        <div class="box">
+          <div class="row" style="justify-content:space-between;align-items:flex-start">
+            <div>
+              <strong id="orderTitle"></strong>
+              <div id="orderMeta" style="margin-top:6px;color:#374151;font-size:14px"></div>
+              <div id="eta" class="flow"></div>
+            </div>
+            <div class="row">
+              <button class="btn gray" id="btnPDF">Exportar PDF</button>
+              <button class="btn gray" id="btnPrint">Imprimir</button>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:12px">
+            <div class="field" style="min-width:220px">
+              <label for="stateSel">Estado</label>
+              <select id="stateSel">
+                <option>Pendiente</option>
+                <option>En preparación</option>
+                <option>Enviado</option>
+                <option>Entregado</option>
+              </select>
+            </div>
+            <button class="btn ok" id="btnUpdate">Actualizar estado</button>
+          </div>
+
+          <div class="flow">Flujo: Pendiente → En preparación → Enviado → Entregado</div>
+
+          <div id="okGen" class="alert success">✔ Orden generada automáticamente con cliente, dirección y productos.</div>
+          <div id="okUpd" class="alert success">✔ Estado actualizado y registrado en el historial.</div>
+          <div id="errAddr" class="alert error">✖ No es posible generar la orden: falta dirección de entrega.</div>
+        </div>
+
+        <div class="box">
+          <strong>Historial</strong>
+          <ul id="log" class="log"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PAID_ORDER = {
+      id:10080, paid:true, customer:"María López", address:"Av. Central 123",
+      items:[{name:"Pan molde sin gluten",qty:1},{name:"Pack desayuno",qty:2}],
+      eta:"02/10/2025"
+    };
+    const PAID_ORDER_NO_ADDRESS = {
+      id:10081, paid:true, customer:"Cliente sin dirección", address:"",
+      items:[{name:"Pan molde sin gluten",qty:1}], eta:"03/10/2025"
+    };
+
+    const orderTitle=document.getElementById("orderTitle");
+    const orderMeta=document.getElementById("orderMeta");
+    const eta=document.getElementById("eta");
+    const paidBanner=document.getElementById("paidBanner");
+    const paidText=document.getElementById("paidText");
+    const paidPill=document.getElementById("paidPill");
+    const okGen=document.getElementById("okGen");
+    const okUpd=document.getElementById("okUpd");
+    const errAddr=document.getElementById("errAddr");
+    const stateSel=document.getElementById("stateSel");
+    const btnUpdate=document.getElementById("btnUpdate");
+    const btnPDF=document.getElementById("btnPDF");
+    const btnPrint=document.getElementById("btnPrint");
+    const log=document.getElementById("log");
+
+    function hideAlerts(){ okGen.style.display="none"; okUpd.style.display="none"; errAddr.style.display="none"; }
+    function logMsg(m){ const li=document.createElement("li"); li.textContent=m; log.prepend(li); }
+
+    function fmtItems(arr){ return arr.map(i=>`${i.qty} × ${i.name}`).join(", "); }
+
+    function generateFromPayment(pedido){
+      hideAlerts();
+      if(!pedido.address){
+        errAddr.style.display="block";
+        logMsg(`Error al generar orden para pedido #${pedido.id}: falta dirección de entrega.`);
+        return null;
+      }
+      const ord = {
+        code:"D"+pedido.id,
+        state:"Pendiente",
+        customer:pedido.customer,
+        address:pedido.address,
+        items:pedido.items,
+        eta:pedido.eta
+      };
+      okGen.style.display="block";
+      paidBanner.style.display="block";
+      paidText.textContent=`Pedido #${pedido.id} pagado ✓ • Cliente: ${pedido.customer} • Dirección: ${pedido.address}`;
+      paidPill.textContent="Pagado";
+      logMsg(`Generada orden #${ord.code} con items: ${fmtItems(ord.items)}.`);
+      renderOrder(ord);
+      return ord;
+    }
+
+    function renderOrder(ord){
+      orderTitle.textContent=`Orden de despacho #${ord.code}`;
+      orderMeta.textContent=`Cliente: ${ord.customer} • Dirección: ${ord.address} • Productos: ${fmtItems(ord.items)}`;
+      eta.textContent=`Fecha estimada de entrega: ${ord.eta}`;
+      stateSel.value=ord.state;
+      btnUpdate.onclick=()=>{
+        hideAlerts();
+        const prev=ord.state;
+        ord.state=stateSel.value;
+        okUpd.style.display="block";
+        logMsg(`Estado actualizado: ${prev} → ${ord.state}.`);
+      };
+    }
+
+    btnPDF.addEventListener("click",()=>{ logMsg("Se exportó la orden a PDF."); });
+    btnPrint.addEventListener("click",()=>{ logMsg("Impresión enviada para la orden de despacho."); });
+
+    let current = generateFromPayment(PAID_ORDER);
+    setTimeout(()=>{ generateFromPayment(PAID_ORDER_NO_ADDRESS); }, 800);
+  </script>
+</body>
+</html>

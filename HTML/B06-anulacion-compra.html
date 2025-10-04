@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libre & Rico — Anulación de compra (B06)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --muted:#6b7280; --shadow:0 8px 22px rgba(0,0,0,.08);
+      --primary:#2563eb; --primary-dark:#1e40af; --danger:#ef4444; --gray:#e5e7eb;
+      --ok-bg:#dcfce7; --ok-fg:#065f46; --err-bg:#fee2e2; --err-fg:#7f1d1d; --warn-bg:#fef3c7; --warn-fg:#78350f; --info-bg:#e0f2fe; --info-fg:#075985;
+    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg)}
+    .container{max-width:980px;margin:40px auto;padding:0 16px}
+    h1{margin:0 0 10px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .grid{display:grid;grid-template-columns:1fr;gap:14px}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .box{flex:1;border:1px solid #eef0f4;border-radius:12px;background:#fafafa;padding:16px}
+    .pill{display:inline-block;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:4px 8px;font-size:12px;color:#111827}
+    .btn{padding:12px 16px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer}
+    .btn:hover{background:var(--primary-dark)}
+    .btn.gray{background:#f3f4f6;color:#111;border:1px solid var(--gray)}
+    .btn.danger{background:var(--danger)}
+    .field label{display:block;margin-bottom:6px;font-size:13px}
+    .field input,.field select{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px}
+    .alert{display:none;margin-top:12px;padding:12px;border-radius:12px;font-size:14px}
+    .success{background:var(--ok-bg);color:var(--ok-fg)}
+    .error{background:var(--err-bg);color:var(--err-fg)}
+    .warn{background:var(--warn-bg);color:var(--warn-fg)}
+    .info{background:var(--info-bg);color:var(--info-fg)}
+    .cols{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
+    .log{list-style:none;padding:0;margin:8px 0 0;max-height:200px;overflow:auto}
+    .log li{font-size:13px;color:#374151;padding:6px 8px;border:1px dashed #e5e7eb;border-radius:8px;background:#fff;margin-bottom:6px}
+    @media (max-width:900px){.cols{grid-template-columns:1fr}}
+    pre{margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.55}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Anulación de compra</h1>
+    <p class="sub">Sólo se puede anular si el pedido está en estado Confirmado o Pagado y no está en Despacho.</p>
+
+    <div class="card">
+      <div class="grid">
+        <div class="cols">
+          <div class="box">
+            <div class="row" style="justify-content:space-between;align-items:center">
+              <div><strong id="orderTitle"></strong></div>
+              <div>
+                <span class="pill" id="statusPill"></span>
+                <span class="pill" id="totalPill"></span>
+              </div>
+            </div>
+            <pre id="itemsText" style="margin-top:10px"></pre>
+          </div>
+
+          <div class="box">
+            <div class="field" style="margin-bottom:8px">
+              <label for="orderSelect">Seleccionar pedido</label>
+              <select id="orderSelect"></select>
+            </div>
+            <div class="field">
+              <label for="reason">Motivo (obligatorio)</label>
+              <input id="reason" placeholder="Describe el motivo"/>
+            </div>
+            <div class="row">
+              <button id="cancelBtn" class="btn danger">Anular pedido</button>
+              <button id="resetBtn" class="btn gray">Limpiar</button>
+            </div>
+            <div id="ok" class="alert success">✔ Pedido anulado. Se restituyó el stock y se envió confirmación por correo.</div>
+            <div id="noCancelable" class="alert warn">⚠ Este pedido no puede ser anulado porque ya está en despacho.</div>
+            <div id="needReason" class="alert error">✖ Debes ingresar un motivo para continuar.</div>
+            <div id="refund" class="alert info">ℹ Reembolso iniciado. Se registrará en tu historial.</div>
+          </div>
+        </div>
+
+        <div class="box">
+          <strong>Eventos</strong>
+          <ul id="events" class="log"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const INVENTORY = {"pan":10,"galletas":20};
+    const ORDERS = [
+      {id:10060,status:"Confirmado",total:12500,paid:true,items:[
+        {sku:"pan",name:"Pan sin gluten",price:3990,qty:1},
+        {sku:"galletas",name:"Galletas de arroz",price:2500,qty:1},
+        {sku:"desp",name:"Despacho",price:6010,qty:1}
+      ]},
+      {id:10061,status:"En despacho",total:15990,paid:true,items:[
+        {sku:"pan",name:"Pan sin gluten",price:3990,qty:2},
+        {sku:"desp",name:"Despacho",price:8100,qty:1}
+      ]}
+    ];
+
+    const orderSelect=document.getElementById("orderSelect");
+    const orderTitle=document.getElementById("orderTitle");
+    const statusPill=document.getElementById("statusPill");
+    const totalPill=document.getElementById("totalPill");
+    const itemsText=document.getElementById("itemsText");
+    const events=document.getElementById("events");
+    const reason=document.getElementById("reason");
+    const cancelBtn=document.getElementById("cancelBtn");
+    const resetBtn=document.getElementById("resetBtn");
+    const ok=document.getElementById("ok");
+    const noCancelable=document.getElementById("noCancelable");
+    const needReason=document.getElementById("needReason");
+    const refund=document.getElementById("refund");
+
+    function fmt(n){return "$"+n.toLocaleString("es-CL");}
+    function hideAlerts(){ok.style.display="none";noCancelable.style.display="none";needReason.style.display="none";refund.style.display="none";}
+    function log(t){const li=document.createElement("li");li.textContent=t;events.prepend(li);}
+
+    function loadSelect(){
+      orderSelect.innerHTML = ORDERS.map(o=>`<option value="${o.id}">Pedido #${o.id} — ${o.status}</option>`).join("");
+    }
+
+    function currentOrder(){
+      const id=parseInt(orderSelect.value,10);
+      return ORDERS.find(o=>o.id===id);
+    }
+
+    function render(){
+      hideAlerts();
+      const o=currentOrder();
+      orderTitle.textContent=`Pedido #${o.id}`;
+      statusPill.textContent=`Estado: ${o.status}`;
+      totalPill.textContent=`Total: ${fmt(o.total)}`;
+      const lines=[];
+      lines.push("Detalle:");
+      for(const it of o.items){ lines.push(`• ${it.qty} × ${it.name} — ${fmt(it.price)}`); }
+      itemsText.textContent=lines.join("\n");
+      cancelBtn.disabled = (o.status!=="Confirmado" && o.status!=="Pagado");
+    }
+
+    function restoreStock(o){
+      for(const it of o.items){
+        if(it.sku==="desp") continue;
+        INVENTORY[it.sku]=(INVENTORY[it.sku]||0)+it.qty;
+      }
+    }
+
+    cancelBtn.addEventListener("click",()=>{
+      hideAlerts();
+      const o=currentOrder();
+      if(o.status==="En despacho"){
+        noCancelable.style.display="block";
+        log(`Intento de anulación bloqueado para #${o.id} (estado: ${o.status}).`);
+        return;
+      }
+      if(o.status!=="Confirmado" && o.status!=="Pagado"){
+        noCancelable.style.display="block";
+        log(`No anulable: #${o.id} en estado ${o.status}.`);
+        return;
+      }
+      const r=reason.value.trim();
+      if(!r){ needReason.style.display="block"; return; }
+      o.status="Anulado";
+      restoreStock(o);
+      ok.style.display="block";
+      log(`Pedido #${o.id} anulado. Motivo: "${r}".`);
+      if(o.paid){
+        refund.style.display="block";
+        log(`Reembolso iniciado para pedido #${o.id}.`);
+      }
+      render();
+    });
+
+    resetBtn.addEventListener("click",()=>{reason.value="";hideAlerts();});
+
+    orderSelect.addEventListener("change",()=>{render();});
+    loadSelect();
+    render();
+  </script>
+</body>
+</html>

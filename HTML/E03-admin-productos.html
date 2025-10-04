@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libre & Rico — Admin productos (E03)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --muted:#6b7280; --shadow:0 8px 22px rgba(0,0,0,.08);
+      --primary:#2563eb; --primary-dark:#1e40af; --ok:#10b981; --danger:#ef4444;
+    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg)}
+    .container{max-width:1040px;margin:40px auto;padding:0 16px}
+    h1{margin:0 0 10px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .list-head{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+    .search{flex:1;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px}
+    .btn{padding:10px 12px;border:0;border-radius:10px;background:var(--ok);color:#fff;font-weight:600;cursor:pointer}
+    .btn:hover{filter:brightness(.95)}
+    .btn-blue{background:var(--primary)}
+    .btn-blue:hover{background:var(--primary-dark)}
+    .btn-red{background:var(--danger)}
+    .item{display:flex;justify-content:space-between;align-items:center;border:1px solid #eef0f4;border-radius:12px;padding:10px 12px;margin-bottom:8px}
+    .item .meta{font-size:14px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .field label{display:block;margin:0 0 6px;font-size:13px}
+    .field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px}
+    textarea{min-height:76px;resize:vertical}
+    .actions{display:flex;gap:10px;margin-top:12px}
+    .note{margin-top:8px;font-size:12px;color:var(--muted)}
+    .alert{display:none;margin-top:10px;padding:12px;border-radius:12px;background:#ecfeff;color:#075985}
+    @media (max-width:920px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Administración de productos</h1>
+    <p class="sub">Administrador</p>
+
+    <div class="grid">
+      <div class="card">
+        <div class="list-head">
+          <input id="q" class="search" placeholder="Buscar producto..."/>
+          <button id="new" class="btn">Nuevo producto</button>
+        </div>
+        <div id="list"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Formulario (agregar/editar)</h3>
+        <form id="form" novalidate>
+          <div class="field">
+            <label for="name">Nombre (máx. 80)</label>
+            <input id="name" maxlength="80" required/>
+          </div>
+          <div class="field">
+            <label for="desc">Descripción</label>
+            <textarea id="desc" required></textarea>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="price">Precio (> 0)</label>
+              <input id="price" type="number" min="1" step="10" required/>
+            </div>
+            <div class="field">
+              <label for="cat">Categoría</label>
+              <select id="cat" required>
+                <option>Pan</option>
+                <option>Galletas</option>
+                <option>Snacks</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="stock">Stock</label>
+              <input id="stock" type="number" min="0" step="1" required/>
+            </div>
+          </div>
+          <div class="field">
+            <label for="img">Imagen (PNG/JPG ≤ 2MB)</label>
+            <input id="img" type="file" accept="image/png,image/jpeg"/>
+          </div>
+          <div class="actions">
+            <button class="btn-blue btn" type="submit" id="save">Guardar</button>
+            <button class="btn-red btn" type="button" id="del">Eliminar</button>
+          </div>
+          <div class="note">Cambios reflejados en tiempo real en el catálogo de clientes</div>
+          <div id="msg" class="alert"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const state = {
+      items: [
+        {id:2, name:"Galletas de arroz", price:2500, stock:15, category:"Galletas", desc:"Crujientes y ligeras.", img:null},
+        {id:3, name:"Pan integral sin gluten", price:3990, stock:20, category:"Pan", desc:"Panificado sin gluten, ideal para desayunos.", img:null}
+      ],
+      editingId: null,
+      q:""
+    };
+
+    function fmtCLP(n){ return "$"+n.toLocaleString("es-CL"); }
+
+    function renderList(){
+      const list = $("list");
+      const q = state.q.toLowerCase();
+      const rows = state.items
+        .filter(p => p.name.toLowerCase().includes(q))
+        .sort((a,b)=> a.name.localeCompare(b.name))
+        .map(p=>`<div class="item">
+          <div class="meta">${p.name} · ${fmtCLP(p.price)} · Stock ${p.stock}</div>
+          <div>
+            <button class="btn-blue btn" data-edit="${p.id}">Editar</button>
+            <button class="btn-red btn" data-del="${p.id}">Eliminar</button>
+          </div>
+        </div>`).join("");
+      list.innerHTML = rows || `<div class="item"><div class="meta">Sin resultados</div></div>`;
+      list.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>loadForm(parseInt(b.dataset.edit))));
+      list.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>removeItem(parseInt(b.dataset.del))));
+    }
+
+    function loadForm(id){
+      const p = state.items.find(x=>x.id===id);
+      if(!p) return;
+      state.editingId = id;
+      $("name").value = p.name;
+      $("desc").value = p.desc;
+      $("price").value = p.price;
+      $("cat").value = p.category;
+      $("stock").value = p.stock;
+      $("img").value = "";
+      showMsg("");
+    }
+
+    function clearForm(withExample=false){
+      state.editingId = null;
+      $("form").reset();
+      if(withExample){
+        $("name").value = "Pan integral sin gluten";
+        $("desc").value = "Panificado sin gluten, ideal para desayunos.";
+        $("price").value = 3990;
+        $("cat").value = "Pan";
+        $("stock").value = 20;
+      }
+      showMsg("");
+    }
+
+    function showMsg(t){
+      const m = $("msg");
+      if(!t){ m.style.display="none"; m.textContent=""; return; }
+      m.style.display="block"; m.textContent=t;
+    }
+
+    function validateImage(file){
+      if(!file) return true;
+      const okType = ["image/png","image/jpeg"].includes(file.type);
+      const okSize = file.size <= 2*1024*1024;
+      return okType && okSize;
+    }
+
+    function upsertItem(e){
+      e.preventDefault();
+      const name = $("name").value.trim();
+      const desc = $("desc").value.trim();
+      const price = parseInt($("price").value,10);
+      const cat = $("cat").value;
+      const stock = parseInt($("stock").value,10);
+      const file = $("img").files[0];
+
+      if(!name || !desc || !price || price<=0 || !cat || isNaN(stock) || stock<0){ showMsg("Completa correctamente los campos requeridos"); return; }
+      if(!validateImage(file)){ showMsg("Imagen inválida (solo PNG/JPG ≤ 2MB)"); return; }
+
+      if(state.editingId){
+        const idx = state.items.findIndex(x=>x.id===state.editingId);
+        if(idx>-1){
+          state.items[idx] = {...state.items[idx], name, desc, price, category:cat, stock, img:file||state.items[idx].img};
+          renderList();
+          showMsg("Producto actualizado");
+        }
+      }else{
+        const exists = state.items.some(x=>x.name.toLowerCase()===name.toLowerCase());
+        if(exists){ showMsg("Ya existe un producto con ese nombre"); return; }
+        const id = Date.now();
+        state.items.push({id, name, desc, price, category:cat, stock, img:file||null});
+        renderList();
+        showMsg("Producto agregado");
+      }
+    }
+
+    function removeItem(id){
+      state.items = state.items.filter(x=>x.id!==id);
+      if(state.editingId===id) clearForm();
+      renderList();
+      showMsg("Producto eliminado");
+    }
+
+    $("form").addEventListener("submit", upsertItem);
+    $("del").addEventListener("click", ()=>{ if(state.editingId) removeItem(state.editingId); });
+    $("new").addEventListener("click", ()=> clearForm(true));
+    $("q").addEventListener("input", e=>{ state.q = e.target.value; renderList(); });
+
+    renderList();
+    loadForm(state.items[1].id);
+  </script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libre & Rico — Carrito (B04)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --muted:#6b7280; --shadow:0 8px 22px rgba(0,0,0,.08);
+      --primary:#2563eb; --primary-dark:#1e40af; --danger:#ef4444; --pill:#111827;
+      --warn-bg:#fef3c7; --warn-fg:#78350f;
+    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg)}
+    .container{max-width:980px;margin:40px auto;padding:0 16px}
+    h1{margin:0 0 10px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .table{border:1px solid #eef0f4;border-radius:12px;padding:10px;background:#fafafa}
+    .row{display:grid;grid-template-columns:1fr 140px 140px 140px 120px;gap:10px;align-items:center;padding:10px;border-bottom:1px solid #eef0f4}
+    .row.head{font-weight:600;background:#f3f4f6;border-top-left-radius:12px;border-top-right-radius:12px}
+    .row:last-child{border-bottom:0}
+    .qty{display:flex;gap:6px;align-items:center}
+    .qty input{width:48px;text-align:center;padding:8px;border:1px solid #e5e7eb;border-radius:10px}
+    .btn{padding:10px 12px;border:0;border-radius:10px;background:#e5e7eb;color:#111;cursor:pointer}
+    .btn.primary{background:var(--primary);color:#fff;font-weight:600}
+    .btn.primary:hover{background:var(--primary-dark)}
+    .btn.danger{background:var(--danger);color:#fff}
+    .note{margin-top:12px;padding:12px;border-radius:12px;background:var(--warn-bg);color:var(--warn-fg);font-size:14px}
+    .total{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+    .pill{display:inline-block;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:4px 8px;font-size:12px;color:var(--pill)}
+    .actions{display:flex;gap:10px}
+    @media (max-width:900px){.row{grid-template-columns:1fr 120px 110px 120px 110px}}
+    @media (max-width:720px){.row{grid-template-columns:1fr;gap:6px;align-items:start}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Mi carrito</h1>
+    <p class="sub"> Validación de stock en tiempo real antes de confirmar.</p>
+
+    <div class="card">
+      <div class="table" id="table">
+        <div class="row head">
+          <div>Producto</div><div>Cantidad</div><div>Precio unit.</div><div>Subtotal</div><div>Acciones</div>
+        </div>
+        <div id="rows"></div>
+      </div>
+
+      <div class="note">Validación de stock en tiempo real: si la cantidad excede el stock disponible, se bloquea y se informa.</div>
+
+      <div class="total">
+        <div class="pill" id="itemsCount">0 ítems</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <strong id="total">$0</strong>
+          <div class="actions">
+            <button class="btn" disabled>Seguir comprando</button>
+            <button id="confirm" class="btn primary">Confirmar pedido</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STOCK = {
+      "pan-molde": 2,
+      "pack-desayuno": 9
+    };
+
+    const PRICES = {
+      "pan-molde": 3990,
+      "pack-desayuno": 6990
+    };
+
+    const NAMES = {
+      "pan-molde": "Pan molde sin gluten 450g",
+      "pack-desayuno": "Pack desayuno (combo)"
+    };
+
+    const storageKey = "lr:cart";
+    function getCart(){
+      const s = sessionStorage.getItem(storageKey);
+      if(s) return JSON.parse(s);
+      const init = [{"id":"pan-molde","qty":2},{"id":"pack-desayuno","qty":1}];
+      sessionStorage.setItem(storageKey, JSON.stringify(init));
+      return init;
+    }
+    function setCart(c){ sessionStorage.setItem(storageKey, JSON.stringify(c)); }
+
+    const rowsEl = document.getElementById("rows");
+    const totalEl = document.getElementById("total");
+    const itemsCountEl = document.getElementById("itemsCount");
+    const btnConfirm = document.getElementById("confirm");
+
+    function fmtCLP(n){ return "$"+n.toLocaleString("es-CL"); }
+
+    function calcTotal(cart){
+      return cart.reduce((acc,i)=> acc + PRICES[i.id]*i.qty, 0);
+    }
+
+    function render(){
+      const cart = getCart();
+      rowsEl.innerHTML = cart.map(i=>{
+        const price = PRICES[i.id];
+        const subtotal = price * i.qty;
+        const stock = STOCK[i.id] ?? 0;
+        const disabledMinus = i.qty<=1 ? "disabled" : "";
+        const disabledPlus = i.qty>=10 ? "disabled" : "";
+        return `<div class="row" data-id="${i.id}">
+          <div>${NAMES[i.id]}</div>
+          <div class="qty">
+            <span class="pill">Cant.</span>
+            <button class="btn btn-sm" data-act="dec" ${disabledMinus}>−</button>
+            <input type="number" min="1" max="10" value="${i.qty}">
+            <button class="btn btn-sm" data-act="inc" ${disabledPlus}>+</button>
+            <span class="pill">Stock: ${stock}</span>
+          </div>
+          <div>${fmtCLP(price)}</div>
+          <div class="subtotal">${fmtCLP(subtotal)}</div>
+          <div><button class="btn danger" data-act="del">Eliminar</button></div>
+        </div>`;
+      }).join("");
+
+      const total = calcTotal(cart);
+      totalEl.textContent = fmtCLP(total);
+      const items = cart.reduce((a,i)=>a+i.qty,0);
+      itemsCountEl.textContent = items+" ítems";
+
+      rowsEl.querySelectorAll(".row").forEach(r=>{
+        const id = r.dataset.id;
+        const input = r.querySelector("input[type=number]");
+        const btnInc = r.querySelector("[data-act=inc]");
+        const btnDec = r.querySelector("[data-act=dec]");
+        const btnDel = r.querySelector("[data-act=del]");
+
+        btnInc.addEventListener("click", ()=> setQty(id, getQty(id)+1));
+        btnDec.addEventListener("click", ()=> setQty(id, getQty(id)-1));
+        btnDel.addEventListener("click", ()=> removeItem(id));
+        input.addEventListener("change", ()=> setQty(id, parseInt(input.value,10)||1));
+      });
+    }
+
+    function getQty(id){
+      const c = getCart();
+      const item = c.find(x=>x.id===id);
+      return item ? item.qty : 0;
+    }
+
+    function setQty(id, qty){
+      const c = getCart();
+      const i = c.find(x=>x.id===id);
+      if(!i) return;
+      const maxStock = STOCK[id] ?? 0;
+      let val = Math.max(1, Math.min(10, qty));
+      if(val > maxStock){
+        alert(`Stock insuficiente (máx. ${maxStock})`);
+        val = Math.min(val, maxStock || 1);
+      }
+      i.qty = val;
+      setCart(c);
+      render();
+    }
+
+    function removeItem(id){
+      let c = getCart().filter(x=>x.id!==id);
+      setCart(c);
+      render();
+    }
+
+    btnConfirm.addEventListener("click", ()=>{
+      const c = getCart();
+      for(const i of c){
+        const maxStock = STOCK[i.id] ?? 0;
+        if(i.qty > maxStock){
+          alert(`No se puede confirmar: "${NAMES[i.id]}" tiene stock ${maxStock}.`);
+          return;
+        }
+      }
+      alert("Carrito confirmado. Total: "+fmtCLP(calcTotal(c)));
+    });
+
+    render();
+  </script>
+</body>
+</html>

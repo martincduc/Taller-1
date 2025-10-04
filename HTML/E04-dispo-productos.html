@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libre & Rico — Disponibilidad (E04)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --muted:#6b7280; --shadow:0 8px 22px rgba(0,0,0,.08);
+      --primary:#2563eb; --ok:#10b981; --out:#6b7280;
+      --ok-bg:#dcfce7; --ok-fg:#065f46; --warn-bg:#fef3c7; --warn-fg:#78350f;
+    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg)}
+    .container{max-width:840px;margin:40px auto;padding:0 16px}
+    h1{margin:0 0 10px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .list{border:1px solid #eef0f4;border-radius:12px;padding:14px;background:#fafafa}
+    .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;border-bottom:1px solid #eef0f4;padding:10px 6px}
+    .row:last-child{border-bottom:0}
+    .name{font-weight:600}
+    .controls{display:flex;gap:8px;align-items:center}
+    .pill{font-size:12px;border:1px solid #e5e7eb;border-radius:999px;padding:3px 8px;background:#f3f4f6;color:#374151}
+    .stock{width:70px;padding:10px;border:1px solid #e5e7eb;border-radius:10px}
+    .btn{padding:10px 12px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer}
+    .status{padding:8px 10px;border-radius:10px;color:#fff;font-weight:700}
+    .status.ok{background:var(--ok)}
+    .status.out{background:var(--out)}
+    .hint{margin-top:12px;padding:12px;border-radius:12px;background:var(--warn-bg);color:var(--warn-fg);font-size:14px}
+    .toast{display:none;margin-top:12px;padding:12px;border-radius:12px;background:var(--ok-bg);color:var(--ok-fg);font-size:14px}
+    @media (max-width:680px){
+      .row{align-items:flex-start}
+      .controls{width:100%;justify-content:flex-start;flex-wrap:wrap}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Disponibilidad de productos</h1>
+    <p class="sub">Validación en tiempo real al confirmar pedidos.</p>
+
+    <div class="card">
+      <div class="list" id="list"></div>
+      <div class="hint">Validación al confirmar pedidos: si stock = 0, se bloquea la compra y se muestra “Producto agotado”.</div>
+      <div id="toast" class="toast">Stock actualizado.</div>
+    </div>
+  </div>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    const list = $("#list");
+    const toast = $("#toast");
+
+    let products = [
+      {id:1, name:"Pan molde sin gluten", stock:5},
+      {id:2, name:"Galletas de arroz", stock:0}
+    ];
+
+    function render(){
+      list.innerHTML = products.map(p=>{
+        const status = p.stock>0 ? `<span class="status ok">Disponible</span>` : `<span class="status out">Agotado</span>`;
+        const note = p.stock>0 ? "" : `<span class="sub" style="margin-left:8px">No permite agregar al carrito</span>`;
+        return `<div class="row" data-id="${p.id}">
+          <div class="name">${p.name}</div>
+          <div class="controls">
+            <span class="pill">Stock</span>
+            <input class="stock" type="number" min="0" step="1" value="${p.stock}">
+            <button class="btn">Actualizar</button>
+            ${status}${note}
+          </div>
+        </div>`;
+      }).join("");
+
+      list.querySelectorAll(".row").forEach(row=>{
+        const id = parseInt(row.dataset.id,10);
+        const input = row.querySelector(".stock");
+        const btn = row.querySelector(".btn");
+        btn.addEventListener("click", ()=>{
+          const v = Math.max(0, parseInt(input.value,10)||0);
+          const idx = products.findIndex(x=>x.id===id);
+          products[idx].stock = v;
+          showToast("Stock actualizado.");
+          render();
+        });
+      });
+    }
+
+    function showToast(t){
+      toast.textContent = t;
+      toast.style.display = "block";
+      clearTimeout(showToast.tid);
+      showToast.tid = setTimeout(()=> toast.style.display="none", 1600);
+    }
+
+    render();
+  </script>
+</body>
+</html>

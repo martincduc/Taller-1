@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libre & Rico — Recuperación de contraseña (E06)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --muted:#6b7280; --shadow:0 8px 22px rgba(0,0,0,.08);
+      --primary:#2563eb; --primary-dark:#1e40af; --gray:#e5e7eb;
+      --ok-bg:#dcfce7; --ok-fg:#065f46; --err-bg:#fee2e2; --err-fg:#7f1d1d; --warn-bg:#fef3c7; --warn-fg:#78350f; --info-bg:#e0f2fe; --info-fg:#075985;
+    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg)}
+    .container{max-width:900px;margin:40px auto;padding:0 16px}
+    h1{margin:0 0 10px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .box{border:1px solid #eef0f4;border-radius:12px;background:#fafafa;padding:16px;margin-bottom:12px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .field{margin-bottom:12px}
+    .field label{display:block;margin:0 0 6px;font-size:13px}
+    .field input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:15px}
+    .btn{padding:12px 16px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer}
+    .btn:hover{background:var(--primary-dark)}
+    .btn.gray{background:#f3f4f6;color:#111;border:1px solid var(--gray)}
+    .alert{display:none;margin-top:12px;padding:12px;border-radius:12px;font-size:14px}
+    .success{background:var(--ok-bg);color:var(--ok-fg)}
+    .error{background:var(--err-bg);color:var(--err-fg)}
+    .warn{background:var(--warn-bg);color:var(--warn-fg)}
+    .info{background:var(--info-bg);color:var(--info-fg)}
+    .hint{font-size:12px;color:var(--muted)}
+    .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media (max-width:900px){.cols{grid-template-columns:1fr}}
+    .pill{display:inline-block;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:4px 8px;font-size:12px;color:#111827}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Recuperar contraseña</h1>
+    <p class="sub">Ingresa tu correo. Se enviará un enlace con token válido 15 minutos. El token se invalida al usarlo o expirar.</p>
+
+    <div class="card">
+      <div class="cols">
+        <div class="box">
+          <div class="field">
+            <label for="email">Correo registrado</label>
+            <input id="email" type="email" placeholder="cliente1@ejemplo.com" value="cliente1@ejemplo.com"/>
+          </div>
+          <div class="row">
+            <button id="send" class="btn">Enviar enlace</button>
+            <span class="pill" id="sentInfo" style="display:none"></span>
+          </div>
+          <div id="sentOk" class="alert info">ℹ Enlace de recuperación enviado. Revisa tu correo.</div>
+          <div id="noUser" class="alert error">✖ Correo no registrado. No se envió enlace.</div>
+        </div>
+
+        <div class="box">
+          <div class="row" style="justify-content:space-between;align-items:center">
+            <strong>Restablecer con token</strong>
+            <span class="pill">Vigencia: 15 min</span>
+          </div>
+          <div class="field">
+            <label for="token">Token</label>
+            <input id="token" placeholder="abc123xyz"/>
+          </div>
+          <div class="field">
+            <label for="newpass">Nueva contraseña</label>
+            <input id="newpass" type="password" placeholder="Nueva contraseña"/>
+            <div class="hint">Debe ser de 8+ caracteres e incluir una mayúscula y un número.</div>
+          </div>
+          <div class="row">
+            <button id="reset" class="btn gray">Restablecer contraseña</button>
+          </div>
+          <div id="ok" class="alert success">✔ Recuperación exitosa. Ya puedes iniciar sesión con tu nueva contraseña.</div>
+          <div id="expired" class="alert warn">⚠ El enlace ha expirado. Solicita uno nuevo.</div>
+          <div id="invalid" class="alert error">✖ Token inválido.</div>
+          <div id="weak" class="alert warn">⚠ La contraseña no cumple los requisitos.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const USERS={"cliente1@ejemplo.com":{password:"OldPass1",verified:true}};
+    const key="lr:reset";
+    function hideAlerts(){sentOk.style.display="none";noUser.style.display="none";ok.style.display="none";expired.style.display="none";invalid.style.display="none";weak.style.display="none";}
+    function passOK(p){return p.length>=8 && /[A-Z]/.test(p) && /\d/.test(p);}
+    function storeReset(obj){sessionStorage.setItem(key,JSON.stringify(obj));}
+    function getReset(){try{return JSON.parse(sessionStorage.getItem(key)||"null")}catch{return null}}
+
+    const email=document.getElementById("email");
+    const send=document.getElementById("send");
+    const sentOk=document.getElementById("sentOk");
+    const noUser=document.getElementById("noUser");
+    const sentInfo=document.getElementById("sentInfo");
+
+    const token=document.getElementById("token");
+    const newpass=document.getElementById("newpass");
+    const reset=document.getElementById("reset");
+    const ok=document.getElementById("ok");
+    const expired=document.getElementById("expired");
+    const invalid=document.getElementById("invalid");
+    const weak=document.getElementById("weak");
+
+    send.addEventListener("click",()=>{
+      hideAlerts();
+      const mail=email.value.trim().toLowerCase();
+      if(!USERS[mail]){ noUser.style.display="block"; return; }
+      const data={email:mail,token:"abc123xyz",exp:Date.now()+15*60*1000};
+      storeReset(data);
+      sentOk.style.display="block";
+      sentInfo.style.display="inline-block";
+      sentInfo.textContent="Token demo: abc123xyz";
+    });
+
+    reset.addEventListener("click",()=>{
+      hideAlerts();
+      const data=getReset();
+      const t=token.value.trim();
+      const p=newpass.value;
+      if(!passOK(p)){ weak.style.display="block"; return; }
+      if(!data || t!==data.token){ invalid.style.display="block"; return; }
+      if(Date.now()>data.exp){ expired.style.display="block"; return; }
+      USERS[data.email].password=p;
+      sessionStorage.removeItem(key);
+      ok.style.display="block";
+      setTimeout(()=>{ window.location.href="/auth/login"; },1200);
+    });
+  </script>
+</body>
+</html>

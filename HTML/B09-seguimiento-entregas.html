@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libre & Rico — Seguimiento de entregas (B09)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --muted:#6b7280; --shadow:0 8px 22px rgba(0,0,0,.08);
+      --primary:#2563eb; --primary-dark:#1e40af; --gray:#e5e7eb;
+      --ok-bg:#dcfce7; --ok-fg:#065f46; --info-bg:#e0f2fe; --info-fg:#075985;
+    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg)}
+    .container{max-width:980px;margin:40px auto;padding:0 16px}
+    h1{margin:0 0 10px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .box{border:1px solid #eef0f4;border-radius:12px;background:#fafafa;padding:16px}
+    .btn{padding:10px 14px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer}
+    .btn:hover{background:var(--primary-dark)}
+    .pill{display:inline-block;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:4px 8px;font-size:12px;color:#111827}
+    .alert{display:none;margin-top:12px;padding:12px;border-radius:12px;font-size:14px}
+    .success{background:var(--ok-bg);color:var(--ok-fg)}
+    .info{background:var(--info-bg);color:var(--info-fg)}
+    .grid{display:grid;grid-template-columns:1fr;gap:14px}
+    .map{height:180px;border:2px dashed #d1d5db;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:13px}
+    .history{list-style:none;padding:0;margin:8px 0 0}
+    .history li{padding:8px 10px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:6px;font-size:14px;color:#374151}
+    .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media (max-width:900px){.cols{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Seguimiento de pedido</h1>
+    <p class="sub">Estados: Pendiente → En preparación → Enviado → Entregado. Notificaciones automáticas por cambio de estado.</p>
+
+    <div class="card">
+      <div class="grid">
+        <div class="box">
+          <div class="row" style="justify-content:space-between">
+            <div>
+              <strong>Pedido <span id="orderId">#10090</span></strong>
+              <div id="stateLine" style="margin-top:6px;color:#374151"></div>
+            </div>
+            <div class="row">
+              <span class="pill" id="lastUpdated"></span>
+              <button class="btn" id="refresh">Actualizar</button>
+            </div>
+          </div>
+          <div id="ok" class="alert success">✔ Estado actualizado correctamente.</div>
+        </div>
+
+        <div class="cols">
+          <div class="box">
+            <strong>En tránsito</strong>
+            <div class="map" id="map">Ubicación aproximada • ETA <span id="eta" style="margin-left:4px"></span></div>
+            <div id="info" class="alert info">ℹ Mostrando progreso del despacho mientras el estado sea “Enviado”.</div>
+          </div>
+
+          <div class="box">
+            <strong>Historial de estados</strong>
+            <ul id="history" class="history"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const order = {
+      id:10090,
+      current:{status:"Enviado", time:"13:00"},
+      history:[
+        {status:"Confirmado", time:"10:00"},
+        {status:"En preparación", time:"11:00"},
+        {status:"Enviado", time:"13:00"}
+      ],
+      eta:"17:30"
+    };
+
+    const orderId=document.getElementById("orderId");
+    const stateLine=document.getElementById("stateLine");
+    const lastUpdated=document.getElementById("lastUpdated");
+    const historyList=document.getElementById("history");
+    const refresh=document.getElementById("refresh");
+    const ok=document.getElementById("ok");
+    const info=document.getElementById("info");
+    const eta=document.getElementById("eta");
+
+    function hideAlerts(){ ok.style.display="none"; info.style.display="none"; }
+    function nowCL(){ return new Date().toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"}); }
+
+    function renderHeader(){
+      orderId.textContent="#"+order.id;
+      stateLine.textContent=`Estado actual: ${order.current.status} (${order.current.time})`;
+      lastUpdated.textContent="Actualizado: "+nowCL();
+    }
+
+    function renderETA(){
+      eta.textContent=order.eta;
+      info.style.display = (order.current.status==="Enviado") ? "block" : "none";
+    }
+
+    function renderHistory(){
+      historyList.innerHTML = order.history
+        .map(h=>`<li>${h.time} — ${h.status}</li>`).join("");
+    }
+
+    function simulateUpdate(){
+      hideAlerts();
+      const seq=["Pendiente","En preparación","Enviado","Entregado"];
+      const idx=seq.indexOf(order.current.status);
+      if(idx>=0 && idx<seq.length-1){
+        const next=seq[idx+1];
+        const t=nowCL();
+        order.current={status:next,time:t};
+        order.history.push({status:next,time:t});
+        if(next==="Enviado"){
+          const d=new Date(); d.setMinutes(d.getMinutes()+Math.floor(120+Math.random()*40));
+          order.eta=d.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"});
+        }
+        ok.style.display="block";
+      }
+      renderHeader();
+      renderETA();
+      renderHistory();
+    }
+
+    refresh.addEventListener("click",simulateUpdate);
+
+    renderHeader();
+    renderETA();
+    renderHistory();
+  </script>
+</body>
+</html>

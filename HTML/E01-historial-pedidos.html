@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libre & Rico — Mi historial de pedidos (E01)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --muted:#6b7280; --shadow:0 8px 22px rgba(0,0,0,.08);
+      --primary:#2563eb; --primary-dark:#1e40af; --ok:#059669; --warn:#a16207; --err:#b91c1c;
+    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg)}
+    .container{max-width:980px;margin:40px auto;padding:0 16px}
+    h1{margin:0 0 10px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:12px}
+    .field label{display:block;margin:0 0 6px;font-size:13px}
+    .field input,.field select{padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px}
+    .btn{padding:10px 14px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer}
+    .btn:hover{background:var(--primary-dark)}
+    .list{border:1px solid #eef0f4;border-radius:12px;padding:12px;background:#fafafa}
+    .row{padding:10px 6px;border-bottom:1px solid #eef0f4;display:flex;gap:10px;justify-content:space-between;align-items:center}
+    .row:last-child{border-bottom:0}
+    .cols{display:grid;grid-template-columns:120px 140px 120px 1fr;gap:8px;align-items:center}
+    .pill{font-size:12px;border:1px solid #e5e7eb;border-radius:999px;padding:3px 8px;color:#374151;background:#f3f4f6}
+    .state-ok{color:var(--ok);font-weight:600}
+    .state-pend{color:var(--warn);font-weight:600}
+    .empty{display:none;margin:10px 6px 0;padding:12px;border-radius:12px;background:#f3f4f6;color:#4b5563}
+    @media (max-width:760px){
+      .cols{grid-template-columns:1fr;gap:2px}
+      .row{align-items:flex-start}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Mi historial de pedidos</h1>
+
+    <div class="card">
+      <form id="form" class="filters">
+        <div class="field">
+          <label for="desde">Desde</label>
+          <input id="desde" type="date" value="2025-08-01"/>
+        </div>
+        <div class="field">
+          <label for="hasta">Hasta</label>
+          <input id="hasta" type="date" value="2025-08-31"/>
+        </div>
+        <div class="field">
+          <label for="estado">Estado</label>
+          <select id="estado">
+            <option value="all">Todos</option>
+            <option value="Entregado">Entregado</option>
+            <option value="Pendiente">Pendiente</option>
+          </select>
+        </div>
+        <button class="btn" type="submit">Filtrar</button>
+      </form>
+
+      <div class="list" id="lista"></div>
+      <div id="empty" class="empty">No hay pedidos registrados</div>
+    </div>
+  </div>
+
+  <script>
+    const DATA = [
+      {id:10021, date:"2025-08-10", total:9990,  state:"Entregado"},
+      {id:10022, date:"2025-08-15", total:12500, state:"Pendiente"}
+    ];
+
+    const els = {
+      form: document.getElementById("form"),
+      desde: document.getElementById("desde"),
+      hasta: document.getElementById("hasta"),
+      estado: document.getElementById("estado"),
+      lista: document.getElementById("lista"),
+      empty: document.getElementById("empty")
+    };
+
+    function fmtCLP(n){ return "$"+n.toLocaleString("es-CL"); }
+
+    function filterData(){
+      const d1 = els.desde.value ? new Date(els.desde.value) : null;
+      const d2 = els.hasta.value ? new Date(els.hasta.value) : null;
+      const st = els.estado.value;
+      return DATA.filter(o=>{
+        const od = new Date(o.date);
+        const inRange = (!d1 || od >= d1) && (!d2 || od <= d2);
+        const byState = st==="all" ? true : o.state===st;
+        return inRange && byState;
+      }).sort((a,b)=> new Date(b.date)-new Date(a.date));
+    }
+
+    function render(){
+      const rows = filterData();
+      els.lista.innerHTML = rows.map(o=>{
+        const stateClass = o.state==="Entregado" ? "state-ok" : "state-pend";
+        return `<div class="row">
+          <div class="cols">
+            <span class="pill">#${o.id}</span>
+            <span>${o.date.split("-").reverse().join("/")}</span>
+            <span>${fmtCLP(o.total)}</span>
+            <span class="${stateClass}">${o.state}</span>
+          </div>
+        </div>`;
+      }).join("");
+      if(rows.length===0){ els.empty.style.display="block"; } else { els.empty.style.display="none"; }
+    }
+
+    els.form.addEventListener("submit", e=>{ e.preventDefault(); render(); });
+    render();
+  </script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libre & Rico — Boleta digital (B07)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --muted:#6b7280; --shadow:0 8px 22px rgba(0,0,0,.08);
+      --primary:#2563eb; --primary-dark:#1e40af; --gray:#e5e7eb;
+      --ok-bg:#dcfce7; --ok-fg:#065f46; --warn-bg:#fef3c7; --warn-fg:#78350f;
+      --info-bg:#e0f2fe; --info-fg:#075985;
+    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg)}
+    .container{max-width:900px;margin:40px auto;padding:0 16px}
+    h1{margin:0 0 10px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .box{border:1px solid #eef0f4;border-radius:12px;background:#fafafa;padding:16px;margin-bottom:12px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{padding:12px 16px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer}
+    .btn:hover{background:var(--primary-dark)}
+    .btn.gray{background:#f3f4f6;color:#111;border:1px solid var(--gray)}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
+    .alert{display:none;margin-top:12px;padding:12px;border-radius:12px;font-size:14px}
+    .success{background:var(--ok-bg);color:var(--ok-fg)}
+    .warn{background:var(--warn-bg);color:var(--warn-fg)}
+    .info{background:var(--info-bg);color:var(--info-fg)}
+    .pill{display:inline-block;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:4px 8px;font-size:12px;color:#111827}
+    pre{margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.5}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Boleta digital</h1>
+    <p class="sub">Se genera automáticamente al confirmar y pagar. Respaldo legal 5 años.</p>
+
+    <div class="card">
+      <div class="box" id="summaryBox">
+        <strong id="orderSummary"></strong>
+        <pre id="itemsText"></pre>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="btnPDF">Ver PDF</button>
+          <button class="btn gray" id="btnReenviar">Reenviar</button>
+          <button class="btn gray" id="btnRetry">Reintentar envío admin</button>
+        </div>
+      </div>
+
+      <div class="box">
+        <strong>Historial de acciones</strong>
+        <ul id="log" style="list-style:none;padding-left:0;margin-top:10px;font-size:13px;color:#374151"></ul>
+      </div>
+
+      <div id="ok" class="alert success">✔ Boleta generada y enviada exitosamente al cliente.</div>
+      <div id="resent" class="alert info">ℹ Boleta reenviada al correo del cliente.</div>
+      <div id="retry" class="alert warn">⚠ Reintento manual realizado. PDF reenviado y registrado en logs.</div>
+    </div>
+  </div>
+
+  <script>
+    const ORDER = {
+      id:10070,
+      cliente:"cliente1@ejemplo.com",
+      total:15990,
+      productos:[
+        {nombre:"Pan sin gluten",precio:3990,cant:1},
+        {nombre:"Pack desayuno (combo)",precio:6990,cant:1},
+      ]
+    };
+
+    const log=document.getElementById("log");
+    const ok=document.getElementById("ok");
+    const resent=document.getElementById("resent");
+    const retry=document.getElementById("retry");
+    const orderSummary=document.getElementById("orderSummary");
+    const itemsText=document.getElementById("itemsText");
+    const btnPDF=document.getElementById("btnPDF");
+    const btnReenviar=document.getElementById("btnReenviar");
+    const btnRetry=document.getElementById("btnRetry");
+
+    function hideAlerts(){
+      ok.style.display="none";resent.style.display="none";retry.style.display="none";
+    }
+    function logMsg(msg){
+      const li=document.createElement("li");
+      const now=new Date().toLocaleTimeString("es-CL");
+      li.textContent=`[${now}] ${msg}`;
+      log.prepend(li);
+    }
+
+    function fmt(n){return "$"+n.toLocaleString("es-CL");}
+
+    function render(){
+      orderSummary.textContent=`Pedido #${ORDER.id} — Cliente: ${ORDER.cliente} — Total ${fmt(ORDER.total)}`;
+      const lines=[];
+      lines.push("Detalle de productos:");
+      for(const p of ORDER.productos){
+        lines.push(`• ${p.cant} × ${p.nombre} — ${fmt(p.precio)}`);
+      }
+      lines.push(`Subtotal: ${fmt(13420)} | Impuestos: ${fmt(2570)} | Total: ${fmt(15990)}`);
+      itemsText.textContent=lines.join("\n");
+    }
+
+    btnPDF.addEventListener("click",()=>{
+      hideAlerts();
+      ok.style.display="block";
+      logMsg("Se generó la boleta digital en PDF y se envió al cliente.");
+    });
+
+    btnReenviar.addEventListener("click",()=>{
+      hideAlerts();
+      resent.style.display="block";
+      logMsg("El cliente solicitó reenvío de la boleta desde historial.");
+    });
+
+    btnRetry.addEventListener("click",()=>{
+      hideAlerts();
+      retry.style.display="block";
+      logMsg("Administrador realizó reintento manual tras rebote de correo.");
+    });
+
+    render();
+  </script>
+</body>
+</html>

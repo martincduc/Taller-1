@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libre & Rico — Pago (B03)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --muted:#6b7280;
+      --primary:#2563eb; --primary-dark:#1e40af;
+      --ok-bg:#dcfce7; --ok-fg:#065f46;
+      --err-bg:#fee2e2; --err-fg:#7f1d1d;
+      --warn-bg:#fef3c7; --warn-fg:#78350f;
+      --shadow:0 8px 22px rgba(0,0,0,.08);
+    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg)}
+    .container{max-width:900px;margin:40px auto;padding:0 16px;display:grid;gap:16px}
+    .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    h1{margin:0}
+    .muted{color:var(--muted);font-size:13px}
+
+    .summary{display:flex;gap:16px;align-items:flex-start}
+    .box{flex:1;border:1px solid #eef0f4;border-radius:12px;padding:16px}
+    pre{margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.55}
+    .actions{display:flex;gap:10px;margin-top:12px}
+    .btn{padding:12px 16px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer}
+    .btn:hover{background:var(--primary-dark)}
+    .btn.outline{background:#fff;color:#111;border:1px solid #e5e7eb}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
+
+    .alert{display:none;margin-top:12px;padding:12px;border-radius:12px;font-size:14px}
+    .success{background:var(--ok-bg);color:var(--ok-fg)}
+    .error{background:var(--err-bg);color:var(--err-fg)}
+    .warn{background:var(--warn-bg);color:var(--warn-fg)}
+
+    
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px}
+    .modal .content{background:#fff;border-radius:14px;max-width:460px;width:100%;padding:18px;box-shadow:var(--shadow)}
+    .modal h2{margin:0 0 8px}
+    .modal .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
+    .tag{display:inline-block;font-size:12px;border:1px solid #e5e7eb;border-radius:999px;padding:3px 8px;color:#374151;background:#f3f4f6}
+    .foot{margin-top:10px;font-size:12px;color:#6b7280}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Pago</h1>
+      <p class="muted">Orden #10023 · Usuario: ana@ejemplo.com</p>
+
+      <div class="summary">
+        
+        <div class="box">
+          <h3 style="margin-top:0">Resumen de pedido</h3>
+          <pre>* Orden #10023
+* Pan molde sin gluten 450g ×2  —  $7.980
+* Pack desayuno (combo)         —  $6.990
+* Despacho                      —  $1.000
+------------------------------------------
+  Total:                         $15.970</pre>
+
+          <div class="actions">
+            <button id="pay" class="btn">Ir a pagar</button>
+            <button id="retry" class="btn outline" style="display:none">Reintentar pago</button>
+          </div>
+
+          <div id="paid" class="alert success">✔ ¡Pago recibido! El pedido fue marcado como <b>Pagado</b>. Boleta enviada por correo.</div>
+          <div id="pending" class="alert warn">⚠ Pago cancelado por el usuario. El pedido sigue <b>Pendiente de pago</b>.</div>
+          <div id="rejected" class="alert error">✖ Pago rechazado. El pedido sigue <b>Pendiente de pago</b>. Usa “Reintentar pago”.</div>
+
+        
+        <div class="box" style="flex:.9">
+          <h3 style="margin-top:0">Integración</h3>
+          <pre>order_id: ORD-10023-A
+monto:    $15.970
+retorno:  OK / FAIL / CANCEL
+webhook:  notify(ORDER, status, transaction_id, signature)</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="gateway" class="modal" aria-hidden="true">
+    <div class="content">
+      <h2>Pasarela de pago (Webpay / Servipag)</h2>
+      <p class="muted">Simulación para la historia B03</p>
+      <div class="grid">
+        <button id="auth" class="btn">AUTHORIZED</button>
+        <button id="reject" class="btn outline">REJECTED</button>
+        <button id="cancel" class="btn outline">CANCELLED</button>
+      </div>
+      <p class="foot">Selecciona el resultado y volverás a la tienda.</p>
+    </div>
+  </div>
+
+  <script>
+    
+    const ORDER_ID = "10023";
+    const storageKey = "paid:" + ORDER_ID;
+
+    const btnPay   = document.getElementById("pay");
+    const btnRetry = document.getElementById("retry");
+
+    const msgPaid     = document.getElementById("paid");
+    const msgPending  = document.getElementById("pending");
+    const msgRejected = document.getElementById("rejected");
+
+    const modal = document.getElementById("gateway");
+    const btnAuth   = document.getElementById("auth");
+    const btnReject = document.getElementById("reject");
+    const btnCancel = document.getElementById("cancel");
+
+    function hideAlerts(){ [msgPaid,msgPending,msgRejected].forEach(x=>x.style.display="none"); }
+    function openGateway(){ modal.style.display="flex"; modal.setAttribute("aria-hidden","false"); }
+    function closeGateway(){ modal.style.display="none"; modal.setAttribute("aria-hidden","true"); }
+
+    function setPaidUI(){
+      hideAlerts();
+      msgPaid.style.display = "block";
+      btnPay.disabled = true;
+      btnRetry.style.display = "none";
+    }
+
+    function setPendingRejected(){
+      hideAlerts();
+      msgRejected.style.display = "block";
+      btnRetry.style.display = "inline-block";
+      btnPay.disabled = false;
+    }
+
+    function setPendingCancelled(){
+      hideAlerts();
+      msgPending.style.display = "block";
+      btnRetry.style.display = "inline-block";
+      btnPay.disabled = false;
+    }
+
+   
+    if(localStorage.getItem(storageKey)==="true"){
+      setPaidUI();
+    }
+
+   
+    btnPay.addEventListener("click", ()=>{
+      if(localStorage.getItem(storageKey)==="true") return; // ya pagado
+      openGateway();
+    });
+
+    
+    btnRetry.addEventListener("click", ()=> openGateway());
+
+
+    btnAuth.addEventListener("click", ()=>{
+      closeGateway();
+      localStorage.setItem(storageKey,"true");
+      setPaidUI();
+    });
+
+    btnReject.addEventListener("click", ()=>{
+      closeGateway();
+      setPendingRejected();
+    });
+
+    btnCancel.addEventListener("click", ()=>{
+      closeGateway();
+      setPendingCancelled();
+    });
+  </script>
+</body>
+</html>

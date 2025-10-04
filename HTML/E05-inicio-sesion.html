@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libre & Rico — Inicio de sesión (E05)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --muted:#6b7280; --shadow:0 8px 22px rgba(0,0,0,.08);
+      --primary:#2563eb; --primary-dark:#1e40af; --gray:#e5e7eb;
+      --ok-bg:#dcfce7; --ok-fg:#065f46; --err-bg:#fee2e2; --err-fg:#7f1d1d; --warn-bg:#fef3c7; --warn-fg:#78350f; --info-bg:#e0f2fe; --info-fg:#075985;
+    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg)}
+    .container{max-width:880px;margin:40px auto;padding:0 16px}
+    h1{margin:0 0 10px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .cols{display:grid;grid-template-columns:1fr .9fr;gap:16px}
+    @media (max-width:900px){.cols{grid-template-columns:1fr}}
+    .box{border:1px solid #eef0f4;border-radius:12px;background:#fafafa;padding:16px}
+    .field{margin-bottom:12px}
+    .field label{display:block;margin:0 0 6px;font-size:13px}
+    .field input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:15px}
+    .btn{padding:12px 16px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer}
+    .btn:hover{background:var(--primary-dark)}
+    .btn.link{background:#f3f4f6;color:#111;border:1px solid var(--gray)}
+    .alert{display:none;margin-top:12px;padding:12px;border-radius:12px;font-size:14px}
+    .success{background:var(--ok-bg);color:var(--ok-fg)}
+    .error{background:var(--err-bg);color:var(--err-fg)}
+    .warn{background:var(--warn-bg);color:var(--warn-fg)}
+    .info{background:var(--info-bg);color:var(--info-fg)}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .pill{display:inline-block;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:4px 8px;font-size:12px;color:#111827}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Iniciar sesión</h1>
+    <p class="sub">Campos obligatorios: correo y contraseña. Solo cuentas verificadas.</p>
+
+    <div class="card">
+      <div class="cols">
+        <div class="box">
+          <div class="field">
+            <label for="email">Correo</label>
+            <input id="email" type="email" placeholder="usuario1@ejemplo.com" value="usuario1@ejemplo.com"/>
+          </div>
+          <div class="field">
+            <label for="pass">Contraseña</label>
+            <input id="pass" type="password" placeholder="••••••••" value="GlutenFree2025"/>
+          </div>
+          <div class="row">
+            <button id="login" class="btn">Ingresar</button>
+            <button id="forgot" class="btn link">¿Olvidaste tu contraseña?</button>
+          </div>
+
+          <div id="ok" class="alert success">✔ Inicio de sesión exitoso. Redirigiendo a tu panel…</div>
+          <div id="noUser" class="alert error">✖ Usuario no registrado.</div>
+          <div id="badPass" class="alert warn">⚠ Contraseña incorrecta. Intenta nuevamente.</div>
+          <div id="pending" class="alert info">
+            ℹ Cuenta pendiente de activación.
+            <div class="row" style="margin-top:8px">
+              <span class="pill" id="pendingMail"></span>
+              <button id="resend" class="btn link">Reenviar correo de verificación</button>
+            </div>
+          </div>
+          <div id="resent" class="alert success">✔ Enviamos un nuevo correo de verificación.</div>
+        </div>
+
+        <div class="box">
+          <strong>Datos de prueba</strong>
+          <ul style="margin:8px 0 0;padding-left:18px;color:#374151;font-size:14px">
+            <li>usuario1@ejemplo.com / GlutenFree2025 (verificado)</li>
+            <li>cliente@ejemplo.com (no registrado)</li>
+            <li>pendiente@ejemplo.com / GlutenFree2025 (no verificado)</li>
+          </ul>
+          <div style="margin-top:10px">
+            <span class="pill">Sólo acceden cuentas verificadas</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const USERS = {
+      "usuario1@ejemplo.com": {password:"GlutenFree2025", verified:true},
+      "pendiente@ejemplo.com": {password:"GlutenFree2025", verified:false}
+    };
+
+    const email=document.getElementById("email");
+    const pass=document.getElementById("pass");
+    const login=document.getElementById("login");
+    const forgot=document.getElementById("forgot");
+    const ok=document.getElementById("ok");
+    const noUser=document.getElementById("noUser");
+    const badPass=document.getElementById("badPass");
+    const pending=document.getElementById("pending");
+    const pendingMail=document.getElementById("pendingMail");
+    const resend=document.getElementById("resend");
+    const resent=document.getElementById("resent");
+
+    function hideAlerts(){
+      ok.style.display="none"; noUser.style.display="none"; badPass.style.display="none";
+      pending.style.display="none"; resent.style.display="none";
+    }
+
+    function handleLogin(){
+      hideAlerts();
+      const e=email.value.trim().toLowerCase();
+      const p=pass.value;
+      const user=USERS[e];
+
+      if(!user){ noUser.style.display="block"; return; }
+      if(user.password!==p){ badPass.style.display="block"; return; }
+      if(!user.verified){
+        pending.style.display="block";
+        pendingMail.textContent=e;
+        return;
+      }
+      ok.style.display="block";
+      localStorage.setItem("session:user",e);
+      setTimeout(()=>{ window.location.href="/panel"; },1200);
+    }
+
+    login.addEventListener("click",handleLogin);
+    pass.addEventListener("keydown",e=>{ if(e.key==="Enter") handleLogin(); });
+
+    resend.addEventListener("click",()=>{ hideAlerts(); resent.style.display="block"; });
+    forgot.addEventListener("click",()=>{ alert("Redirigir a recuperación de contraseña"); });
+  </script>
+</body>
+</html>

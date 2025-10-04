@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libre & Rico — Confirmación (B05)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --muted:#6b7280; --shadow:0 8px 22px rgba(0,0,0,.08);
+      --primary:#2563eb; --primary-dark:#1e40af;
+      --ok-bg:#dcfce7; --ok-fg:#065f46; --err-bg:#fee2e2; --err-fg:#7f1d1d; --warn-bg:#fef3c7; --warn-fg:#78350f;
+      --pill:#111827;
+    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg)}
+    .container{max-width:900px;margin:40px auto;padding:0 16px}
+    h1{margin:0 0 10px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    .resume{display:flex;gap:16px;align-items:flex-start}
+    .box{flex:1;border:1px solid #eef0f4;border-radius:12px;padding:16px;background:#fafafa}
+    pre{margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.55}
+    .row{display:flex;gap:18px;flex-wrap:wrap}
+    .field label{display:block;margin:0 0 6px;font-size:13px}
+    .field input,.field select{padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px}
+    .pill{display:inline-block;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:4px 8px;font-size:12px;color:var(--pill)}
+    .actions{display:flex;gap:10px;margin-top:12px}
+    .btn{padding:12px 16px;border:0;border-radius:10px;background:#e5e7eb;color:#111;cursor:pointer}
+    .btn.primary{background:var(--primary);color:#fff;font-weight:600}
+    .btn.primary:hover{background:var(--primary-dark)}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
+    .alert{display:none;margin-top:12px;padding:12px;border-radius:12px;font-size:14px}
+    .success{background:var(--ok-bg);color:var(--ok-fg)}
+    .error{background:var(--err-bg);color:var(--err-fg)}
+    .warn{background:var(--warn-bg);color:var(--warn-fg)}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Confirmación de pedido</h1>
+    <p class="sub">Revisa los datos y confirma para avanzar al pago.</p>
+
+    <div class="card">
+      <div class="grid">
+        <div class="resume">
+          <div class="box" style="flex:1.2">
+            <h3 style="margin-top:0">Pedido <span id="orderLabel">#10055</span></h3>
+            <pre id="itemsText"></pre>
+            <div class="row" style="margin-top:10px">
+              <button class="btn" id="edit" disabled>Editar carrito</button>
+              <button class="btn primary" id="confirm">Confirmar pedido</button>
+            </div>
+            <div id="ok" class="alert success">✔ Pedido <b>#10055</b> confirmado. Redirigiendo a Pago…</div>
+            <div id="noaddr" class="alert warn">⚠ Debe ingresar una dirección de despacho.</div>
+            <div id="empty" class="alert error">✖ El carrito está vacío. No se generó pedido.</div>
+          </div>
+          <div class="box" style="flex:.8">
+            <h3 style="margin-top:0">Datos de despacho y pago</h3>
+            <div class="field" style="margin-bottom:8px">
+              <label for="addr">Dirección</label>
+              <input id="addr" placeholder="Av. Central 456, Santiago" value="Av. Central 456, Santiago"/>
+            </div>
+            <div class="field">
+              <label for="pay">Medio de pago</label>
+              <select id="pay">
+                <option>Webpay</option>
+                <option>Servipag</option>
+              </select>
+            </div>
+            <div style="margin-top:12px">
+              <span class="pill" id="subtotalPill">$0</span>
+              <span class="pill" id="shipPill">Despacho: $0</span>
+              <span class="pill" id="totalPill">Total: $0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PRICES = {"pan-molde":3990,"pack-desayuno":6990};
+    const NAMES = {"pan-molde":"Pan molde sin gluten 450g","pack-desayuno":"Pack desayuno (combo)"};
+    const defaultCart = [{"id":"pan-molde","qty":2},{"id":"pack-desayuno","qty":1}];
+    const key="lr:cart";
+    const getCart=()=>JSON.parse(sessionStorage.getItem(key)||"null")||defaultCart;
+    const setCart=v=>sessionStorage.setItem(key,JSON.stringify(v));
+    if(!sessionStorage.getItem(key)) setCart(defaultCart);
+
+    const itemsText=document.getElementById("itemsText");
+    const subtotalPill=document.getElementById("subtotalPill");
+    const shipPill=document.getElementById("shipPill");
+    const totalPill=document.getElementById("totalPill");
+    const ok=document.getElementById("ok");
+    const noaddr=document.getElementById("noaddr");
+    const empty=document.getElementById("empty");
+    const confirmBtn=document.getElementById("confirm");
+    const addr=document.getElementById("addr");
+
+    function hideAlerts(){ ok.style.display="none"; noaddr.style.display="none"; empty.style.display="none"; }
+    function fmt(n){ return "$"+n.toLocaleString("es-CL"); }
+
+    function render(){
+      hideAlerts();
+      const cart=getCart();
+      if(!cart.length){
+        itemsText.textContent="";
+        subtotalPill.textContent="$0";
+        shipPill.textContent="Despacho: $0";
+        totalPill.textContent="Total: $0";
+        empty.style.display="block";
+        confirmBtn.disabled=true;
+        return;
+      }
+      confirmBtn.disabled=false;
+      const lines=[];
+      let subtotal=0;
+      for(const i of cart){
+        const name=NAMES[i.id];
+        const price=PRICES[i.id];
+        const sub=price*i.qty;
+        subtotal+=sub;
+        lines.push(`${i.qty} × ${name} ($${price.toLocaleString("es-CL")}) → $${sub.toLocaleString("es-CL")}`);
+      }
+      const shipping=4000;
+      const total=subtotal+shipping;
+      lines.unshift("Resumen:");
+      lines.push("");
+      lines.push(`Subtotal: ${fmt(subtotal)}`);
+      lines.push(`Despacho: ${fmt(shipping)}`);
+      lines.push(`Total:    ${fmt(total)}`);
+      itemsText.textContent=lines.join("\n");
+      subtotalPill.textContent=fmt(subtotal);
+      shipPill.textContent="Despacho: "+fmt(shipping);
+      totalPill.textContent="Total: "+fmt(total);
+    }
+
+    confirmBtn.addEventListener("click",()=>{
+      hideAlerts();
+      const cart=getCart();
+      if(!cart.length){ empty.style.display="block"; return; }
+      const address=addr.value.trim();
+      if(!address){ noaddr.style.display="block"; return; }
+      ok.style.display="block";
+      setTimeout(()=>{ window.location.href="/pago"; },1200);
+      localStorage.setItem("order:10055","Confirmado");
+    });
+
+    render();
+  </script>
+</body>
+</html>

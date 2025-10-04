@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Libre & Rico — Mi perfil (E02)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#fff; --muted:#6b7280; --shadow:0 8px 22px rgba(0,0,0,.08);
+      --primary:#2563eb; --primary-dark:#1e40af; --ok-bg:#dcfce7; --ok-fg:#065f46;
+      --warn-bg:#fef3c7; --warn-fg:#78350f; --err-bg:#fee2e2; --err-fg:#7f1d1d;
+    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg)}
+    .container{max-width:760px;margin:40px auto;padding:0 16px}
+    h1{margin:0 0 10px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:13px}
+    .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+    .form{display:grid;gap:14px}
+    .field label{display:block;margin:0 0 6px;font-size:13px}
+    .field input{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .btn{padding:12px 16px;border:0;border-radius:10px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer}
+    .btn:hover{background:var(--primary-dark)}
+    .note{margin-left:12px;padding:12px;border-radius:10px;background:var(--warn-bg);color:var(--warn-fg);font-size:14px;display:inline-block}
+    .actions{display:flex;align-items:center;gap:10px;margin-top:6px}
+    .alert{display:none;margin-top:12px;padding:12px;border-radius:12px;font-size:14px}
+    .success{background:var(--ok-bg);color:var(--ok-fg)}
+    .warn{background:var(--warn-bg);color:var(--warn-fg)}
+    .error{background:var(--err-bg);color:var(--err-fg)}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Mi perfil</h1>
+    <p class="sub">Actualiza nombre, correo, dirección y teléfono.</p>
+
+    <div class="card">
+      <form id="form" class="form" novalidate>
+        <div class="field">
+          <label for="nombre">Nombre (máx. 60)</label>
+          <input id="nombre" maxlength="60" value="Juan Pérez" required/>
+        </div>
+        <div class="field">
+          <label for="correo">Correo (RFC-5322)</label>
+          <input id="correo" type="email" value="juan@ejemplo.com" required/>
+        </div>
+        <div class="field">
+          <label for="direccion">Dirección</label>
+          <input id="direccion" value="Av. Central 456" required/>
+        </div>
+        <div class="field">
+          <label for="telefono">Teléfono (E.164)</label>
+          <input id="telefono" value="+56912345678" required/>
+        </div>
+
+        <div class="actions">
+          <button class="btn" type="submit">Guardar cambios</button>
+          <span class="note">Si cambias el correo, se requiere verificación antes de habilitar el acceso.</span>
+        </div>
+
+        <div id="ok" class="alert success">Datos actualizados con éxito.</div>
+        <div id="pending" class="alert warn">Se envió verificación a tu nuevo correo. Tu cuenta queda <b>Pendiente de verificación</b> hasta confirmar.</div>
+        <div id="err" class="alert error">Número de teléfono no válido.</div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const currentEmail = "juan@ejemplo.com";
+    const f = document.getElementById("form");
+    const nombre = document.getElementById("nombre");
+    const correo = document.getElementById("correo");
+    const direccion = document.getElementById("direccion");
+    const telefono = document.getElementById("telefono");
+    const ok = document.getElementById("ok");
+    const pending = document.getElementById("pending");
+    const err = document.getElementById("err");
+
+    function hideAll(){ ok.style.display="none"; pending.style.display="none"; err.style.display="none"; }
+    function emailValido(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+    function telE164(v){ return /^\+[1-9]\d{7,14}$/.test(v); }
+
+    f.addEventListener("submit", e=>{
+      e.preventDefault();
+      hideAll();
+
+      const n = nombre.value.trim();
+      const c = correo.value.trim().toLowerCase();
+      const d = direccion.value.trim();
+      const t = telefono.value.trim();
+
+      if(!n || !c || !d || !t || !emailValido(c) || n.length>60){
+        err.textContent = "Revisa los campos obligatorios.";
+        err.style.display = "block";
+        return;
+      }
+
+      if(!telE164(t)){
+        err.textContent = "Número de teléfono no válido";
+        err.style.display = "block";
+        return;
+      }
+
+      if(c !== currentEmail){
+        pending.style.display = "block";
+        return;
+      }
+
+      ok.style.display = "block";
+    });
+  </script>
+</body>
+</html>
