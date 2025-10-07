@@ -1548,7 +1548,7 @@
     <section id="view-pasarela" class="view hidden">
       <h2>Pasarela de pago</h2>
       <div class="box">
-        <p>Selecciona método de pago para el pedido <strong id="ordenId">#10100</strong></p>
+        <p>Selecciona metodo de pago para el pedido <strong id="ordenId">#10100</strong></p>
         <div class="pay-grid">
           <button class="pay-option" data-result="AUTHORIZED">Tarjeta Visa</button>
           <button class="pay-option" data-result="REJECTED">Tarjeta Mastercard</button>
@@ -1585,7 +1585,6 @@
     </section>
   </main>
 
-  <!-- Pie de página -->
   <footer class="footer">
     <div class="footer-container">
       <div class="footer-grid">
@@ -1672,13 +1671,13 @@
 
     let pag=1,pageSize=6,cacheFiltro={};
 
-    // Funcionalidad del carrusel
+  
     let currentSlide = 0;
     const totalSlides = 3;
     let carruselInterval;
 
     function initCarrusel() {
-      // Configurar eventos de los controles
+     
       $('.carrusel-arrow.prev').addEventListener('click', () => {
         moveToSlide(currentSlide - 1);
         resetCarruselInterval();
@@ -1696,30 +1695,27 @@
         });
       });
       
-      // Configurar botones del carrusel
+     
       $$('.carrusel-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           go(btn.dataset.route);
         });
       });
       
-      // Iniciar intervalo automático
       startCarruselInterval();
     }
 
     function moveToSlide(index) {
-      // Ajustar índice si está fuera de rango
+ 
       if (index < 0) index = totalSlides - 1;
       if (index >= totalSlides) index = 0;
       
-      // Actualizar slide actual
+     
       currentSlide = index;
       
-      // Mover el carrusel
       const carruselInner = $('#carruselInner');
       carruselInner.style.transform = `translateX(-${currentSlide * 100}%)`;
       
-      // Actualizar indicadores
       $$('.carrusel-dot').forEach((dot, i) => {
         dot.classList.toggle('active', i === currentSlide);
       });
