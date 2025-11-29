@@ -10,7 +10,12 @@ const orderSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   items: [orderItemSchema],
   total: Number,
-  address: String,
+  
+  // --- NUEVOS CAMPOS ---
+  deliveryMethod: { type: String, enum: ['delivery', 'pickup'], default: 'delivery' },
+  commune: { type: String, default: '' },
+  address: { type: String, default: '' }, // Dirección física (calle y número)
+  
   status: { type: String, default: 'Pendiente de pago' }
 }, { timestamps: true });
 
