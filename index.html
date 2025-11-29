@@ -6,6 +6,7 @@
   <title>Libre & Rico — Tienda</title>
   <link rel="stylesheet" href="./style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet">
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -106,6 +107,26 @@
           <div class="form-group"><label>Confirmar Contraseña</label><input type="password" id="registerConfirm" class="form-control"></div>
           <button class="btn-primary full" id="btnRegister">Registrarme</button>
           <p class="auth-switch">¿Ya tienes cuenta? <a id="switchToLogin">Inicia sesión</a></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-profile" class="view hidden">
+      <div class="auth-container" style="max-width: 600px;">
+        <h2>Mi Perfil</h2>
+        <div class="box">
+          <div class="form-group">
+            <label>Nombre Completo</label>
+            <input type="text" id="profileName" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Correo Electrónico</label>
+            <input type="email" id="profileEmail" class="form-control">
+          </div>
+          <div class="row" style="margin-top: 20px;">
+            <button class="btn-secondary" onclick="go('catalogo')">Cancelar</button>
+            <button class="btn-primary" id="btnSaveProfile">Guardar Cambios</button>
+          </div>
         </div>
       </div>
     </section>
@@ -221,7 +242,8 @@
         <div id="resOK" class="hidden">
           <div class="icon success">✅</div>
           <h2>¡Pago Exitoso!</h2>
-          <p>Tu pedido ha sido procesado correctamente. Te hemos enviado el comprobante a tu correo.</p>
+          <p>Tu pedido ha sido procesado correctamente.</p>
+          <button class="btn-secondary full" onclick="verBoleta()" style="margin: 15px 0; border: 2px dashed var(--primary); color: var(--primary);">📄 Ver Boleta Digital</button>
         </div>
         <div id="resREJ" class="hidden">
           <div class="icon error">❌</div>
@@ -251,6 +273,37 @@
       </div>
     </section>
   </main>
+
+  <div id="modal-boleta" class="modal-overlay hidden">
+    <div class="boleta-ticket">
+      <div class="boleta-header">
+        <h3>LIBRE & RICO</h3>
+        <p>RUT: 77.123.456-8</p>
+        <p>Av. Siempre Viva 123, Santiago</p>
+        <p>BOLETA ELECTRÓNICA</p>
+      </div>
+      <div class="boleta-info">
+        <p><strong>N° Orden:</strong> <span id="bolOrden"></span></p>
+        <p><strong>Fecha:</strong> <span id="bolFecha"></span></p>
+        <p><strong>Cliente:</strong> <span id="bolCliente"></span></p>
+      </div>
+      <div class="boleta-divider">--------------------------------</div>
+      <div id="bolItems" class="boleta-items">
+        </div>
+      <div class="boleta-divider">--------------------------------</div>
+      <div class="boleta-total">
+        <p>TOTAL <span id="bolTotal"></span></p>
+      </div>
+      <div class="boleta-footer">
+        <p>¡Gracias por su compra!</p>
+        <p>IVA incluido</p>
+      </div>
+      <div class="boleta-actions">
+        <button class="btn-primary full" onclick="window.print()">Imprimir / Guardar PDF</button>
+        <button class="btn-secondary full" onclick="cerrarBoleta()">Cerrar</button>
+      </div>
+    </div>
+  </div>
 
   <footer class="footer">
     <div class="footer-content">

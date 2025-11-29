@@ -1,7 +1,7 @@
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 
-const routes = ["auth", "catalogo", "carrito", "checkout", "pasarela", "resultado", "seguimiento", "producto"];
+const routes = ["auth", "catalogo", "carrito", "checkout", "pasarela", "resultado", "seguimiento", "producto", "profile"];
 
 const API_BASE = "http://localhost:3000/api";
 const API_PRODUCTOS = `${API_BASE}/productos`;
@@ -13,15 +13,9 @@ const money = (val) => new Intl.NumberFormat('es-CL', { style: 'currency', curre
 // --- TOASTS ---
 function showToast(msg, type = 'info') {
   let c = $('.toast-container');
-  if (!c) { 
-    c = document.createElement('div'); 
-    c.className = 'toast-container'; 
-    document.body.appendChild(c); 
-  }
+  if (!c) { c = document.createElement('div'); c.className = 'toast-container'; document.body.appendChild(c); }
   if (c.children.length > 2) c.firstChild.remove();
-  const t = document.createElement('div'); 
-  t.className = `toast ${type}`; 
-  t.innerText = msg;
+  const t = document.createElement('div'); t.className = `toast ${type}`; t.innerText = msg;
   c.appendChild(t);
   setTimeout(() => { t.classList.add('hiding'); t.addEventListener('animationend', () => { if(t.parentNode) t.parentNode.removeChild(t); }); }, 3000);
 }
@@ -73,6 +67,7 @@ function updateUserSection() {
         <div class="user-dropdown">
           <div class="user-avatar" onclick="toggleMenu(event)">${user.name.charAt(0).toUpperCase()}</div>
           <div class="dropdown-menu hidden" id="userMenuDropdown">
+            <button class="dropdown-item" onclick="go('profile')">👤 Mi Perfil</button>
             <button class="dropdown-item" onclick="go('seguimiento')">📦 Mis Pedidos</button>
             <button class="dropdown-item logout" onclick="logout()">🚪 Cerrar Sesión</button>
           </div>
@@ -86,6 +81,52 @@ function updateUserSection() {
 
 window.toggleMenu = (e) => { e.stopPropagation(); document.getElementById('userMenuDropdown').classList.toggle('hidden'); };
 document.addEventListener('click', () => { document.getElementById('userMenuDropdown')?.classList.add('hidden'); });
+
+// --- PERFIL DE USUARIO (CONEXIÓN BACKEND REAL) ---
+function loadProfile() {
+    const user = getCurrentUser();
+    if(!user) return go('auth');
+    $("#profileName").value = user.name;
+    $("#profileEmail").value = user.email;
+}
+
+$("#btnSaveProfile").onclick = async () => {
+    const btn = $("#btnSaveProfile");
+    const name = $("#profileName").value.trim();
+    const email = $("#profileEmail").value.trim();
+    const token = getToken();
+
+    if(!name || !email) return showToast("Completa todos los campos", "error");
+
+    setLoading(btn, true);
+
+    try {
+        const res = await fetch(`${API_AUTH}/profile`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ name, email })
+        });
+
+        const data = await res.json();
+
+        if(res.ok) {
+            // Actualizar LocalStorage con los datos nuevos que devolvió el servidor
+            setCurrentUser(data.user);
+            updateUserSection(); // Refrescar nombre en el header
+            showToast("Perfil actualizado correctamente", "success");
+        } else {
+            showToast(data.error || "Error al actualizar", "error");
+        }
+    } catch(err) {
+        console.error(err);
+        showToast("Error de conexión", "error");
+    } finally {
+        setLoading(btn, false);
+    }
+};
 
 // --- ROUTER ---
 function go(route) {
@@ -101,6 +142,7 @@ function go(route) {
   if (route === "catalogo") pintarCatalogo();
   if (route === "carrito") pintarCarrito();
   if (route === "checkout") pintarCheckout();
+  if (route === "profile") loadProfile();
   if (route === "seguimiento") {
     if (!getCurrentUser()) { showToast("Debes iniciar sesión", "error"); return go("auth"); }
     loadMyOrders();
@@ -304,6 +346,10 @@ $("#goPasarela").onclick = async () => {
     const d = await res.json();
     if(res.ok) {
        localStorage.setItem("lr:lastOrder", d.orderId);
+       // Guardar datos temporales para la boleta
+       localStorage.setItem("lr:tempOrderItems", JSON.stringify(items));
+       localStorage.setItem("lr:tempOrderTotal", total);
+       
        $("#ordenId").innerText = "#" + d.orderId;
        await cargarProductos();
        go("pasarela");
@@ -352,7 +398,43 @@ $$(".pay-card").forEach(b => b.onclick = async () => {
   }, 1500);
 });
 
-// --- AUTH (CON VALIDACIÓN REGEX Y VISUAL) ---
+// --- BOLETA DIGITAL ---
+window.verBoleta = () => {
+    const oid = localStorage.getItem("lr:lastOrder");
+    const items = JSON.parse(localStorage.getItem("lr:tempOrderItems") || "[]");
+    const total = localStorage.getItem("lr:tempOrderTotal");
+    const user = getCurrentUser();
+
+    $("#bolOrden").innerText = "#" + oid;
+    $("#bolFecha").innerText = new Date().toLocaleDateString();
+    $("#bolCliente").innerText = user ? user.name : "Cliente";
+    $("#bolTotal").innerText = money(parseInt(total || 0));
+
+    const cont = $("#bolItems");
+    cont.innerHTML = "";
+    items.forEach(i => {
+        const p = productos.find(x => x.id == i.id);
+        if(p) {
+            const row = document.createElement("div");
+            row.className = "ticket-item";
+            row.innerHTML = `<span>${i.qty} x ${p.nombre}</span> <span>${money(i.price * i.qty)}</span>`;
+            cont.appendChild(row);
+        }
+    });
+    // Agregar despacho
+    const ship = document.createElement("div");
+    ship.className = "ticket-item";
+    ship.innerHTML = `<span>Despacho</span> <span>${money(3990)}</span>`;
+    cont.appendChild(ship);
+
+    $("#modal-boleta").classList.remove("hidden");
+};
+
+window.cerrarBoleta = () => {
+    $("#modal-boleta").classList.add("hidden");
+};
+
+// --- AUTH ---
 $("#btnLogin").onclick = async () => {
     const btn = $("#btnLogin"); const e=$("#loginEmail").value; const p=$("#loginPassword").value;
     setLoading(btn, true);
@@ -370,11 +452,9 @@ $("#btnRegister").onclick = async () => {
     const p = $("#registerPassword").value;
     const c = $("#registerConfirm").value;
 
-    // Validación básica
     if(!n || !e || !p) return showToast("Faltan campos", "error");
     if(p !== c) return showToast("Contraseñas no coinciden", "error");
 
-    // VALIDACIÓN PASSWORD SEGURA (Misma que en backend)
     const passRegex = /^(?=.*[A-Z])(?=.*\d).{5,}$/;
     if (!passRegex.test(p)) {
         return showToast("Contraseña débil: Usa 1 Mayúscula, 1 Número y mín 5 caracteres", "error");
