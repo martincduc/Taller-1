@@ -3,13 +3,13 @@ const router = express.Router();
 const controller = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
 
-console.log("--> Rutas Auth cargadas"); // LOG PARA DEPURAR
-
 // Rutas Públicas
 router.post('/register', controller.register);
 router.post('/login', controller.login);
+router.post('/forgot-password', controller.forgotPassword);
+router.post('/reset-password', controller.resetPassword);
 
-// Ruta Protegida para Perfil (PUT)
+// Ruta Protegida
 router.put('/profile', authMiddleware, controller.updateProfile);
 
 module.exports = router;

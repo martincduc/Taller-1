@@ -65,20 +65,45 @@
         <div class="auth-form" id="auth-login">
           <h2>Bienvenido</h2>
           <div class="form-group"><label>Correo</label><input type="email" id="loginEmail" class="form-control"></div>
-          <div class="form-group"><label>Contraseña</label><input type="password" id="loginPassword" class="form-control"></div>
+          <div class="form-group">
+            <label>Contraseña</label>
+            <input type="password" id="loginPassword" class="form-control">
+            <div style="text-align:right; margin-top:5px;">
+                <a onclick="go('recovery')" style="font-size:0.85rem; color:var(--primary);">¿Olvidaste tu contraseña?</a>
+            </div>
+          </div>
           <button class="btn-primary full" id="btnLogin">Iniciar Sesión</button>
           <p class="auth-switch"><a id="switchToRegister">Crear cuenta</a></p>
         </div>
+
         <div class="auth-form hidden" id="auth-register">
           <h2>Registro</h2>
           <div class="form-group"><label>Nombre</label><input type="text" id="registerName" class="form-control"></div>
           <div class="form-group"><label>Correo</label><input type="email" id="registerEmail" class="form-control"></div>
-          <div class="form-group">
-            <label>Contraseña</label><input type="password" id="registerPassword" class="form-control" placeholder="Mín 5 chars, 1 Mayus, 1 Num">
-          </div>
+          <div class="form-group"><label>Contraseña</label><input type="password" id="registerPassword" class="form-control" placeholder="Mín 5 chars, 1 Mayus, 1 Num"></div>
           <div class="form-group"><label>Confirmar</label><input type="password" id="registerConfirm" class="form-control"></div>
           <button class="btn-primary full" id="btnRegister">Registrarme</button>
           <p class="auth-switch"><a id="switchToLogin">Volver al login</a></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-recovery" class="view hidden">
+      <div class="auth-container">
+        <div class="auth-form" id="recovery-step1">
+          <h2>Recuperar Contraseña</h2>
+          <p class="muted">Ingresa tu correo para recibir un código.</p>
+          <div class="form-group"><label>Correo</label><input type="email" id="recEmail" class="form-control"></div>
+          <button class="btn-primary full" id="btnSendCode">Enviar Código</button>
+          <p class="auth-switch"><a onclick="go('auth')">Volver</a></p>
+        </div>
+
+        <div class="auth-form hidden" id="recovery-step2">
+          <h2>Cambiar Contraseña</h2>
+          <p class="muted">Ingresa el código enviado a tu correo.</p>
+          <div class="form-group"><label>Código de verificación</label><input type="text" id="recCode" class="form-control" placeholder="Ej: 123456"></div>
+          <div class="form-group"><label>Nueva Contraseña</label><input type="password" id="recNewPass" class="form-control" placeholder="Nueva clave segura"></div>
+          <button class="btn-primary full" id="btnResetPass">Confirmar Cambio</button>
         </div>
       </div>
     </section>
@@ -140,41 +165,17 @@
         </div>
         <div class="box">
           <h3>2. Método de Entrega</h3>
-          
           <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-            <label class="radio-card">
-              <input type="radio" name="deliveryMethod" value="delivery" checked>
-              <span>🚚 Despacho a Domicilio (RM)</span>
-            </label>
-            <label class="radio-card">
-              <input type="radio" name="deliveryMethod" value="pickup">
-              <span>🏪 Retiro en Tienda (Gratis)</span>
-            </label>
+            <label class="radio-card"><input type="radio" name="deliveryMethod" value="delivery" checked><span>🚚 Despacho a Domicilio (RM)</span></label>
+            <label class="radio-card"><input type="radio" name="deliveryMethod" value="pickup"><span>🏪 Retiro en Tienda (Gratis)</span></label>
           </div>
-
           <div id="deliveryFields">
-            <label>Comuna (Región Metropolitana)</label>
-            <select id="comunaSelect" class="form-control">
-              <option value="">Selecciona tu comuna...</option>
-              </select>
-            
-            <label style="margin-top:15px">Dirección (Calle y Número)</label>
-            <input id="addr" class="form-control" placeholder="Ej: Av. Providencia 1234, Depto 501"/>
+            <label>Comuna (Región Metropolitana)</label><select id="comunaSelect" class="form-control"><option value="">Selecciona tu comuna...</option></select>
+            <label style="margin-top:15px">Dirección (Calle y Número)</label><input id="addr" class="form-control" placeholder="Ej: Av. Providencia 1234, Depto 501"/>
           </div>
-
-          <div id="pickupInfo" class="hidden msg info">
-            <p><strong>📍 Dirección de retiro:</strong><br>Av. Siempre Viva 123, Santiago Centro.<br>Horario: Lun-Vie 09:00 - 18:00</p>
-          </div>
-          
-          <div class="checkout-total">
-            <span>Total a pagar:</span>
-            <span id="ckTotal" class="total-amount">$0</span>
-          </div>
-          
-          <div class="row end">
-            <button class="btn-secondary" onclick="go('carrito')">Volver</button>
-            <button class="btn-primary" id="goPasarela">Confirmar y Pagar</button>
-          </div>
+          <div id="pickupInfo" class="hidden msg info"><p><strong>📍 Dirección de retiro:</strong><br>Av. Siempre Viva 123, Santiago Centro.<br>Horario: Lun-Vie 09:00 - 18:00</p></div>
+          <div class="checkout-total"><span>Total a pagar:</span><span id="ckTotal" class="total-amount">$0</span></div>
+          <div class="row end"><button class="btn-secondary" onclick="go('carrito')">Volver</button><button class="btn-primary" id="goPasarela">Confirmar y Pagar</button></div>
           <div id="ckWarn" class="msg err hidden" style="margin-top:10px">Faltan datos de envío.</div>
         </div>
       </div>
@@ -196,17 +197,12 @@
     <section id="view-resultado" class="view hidden">
       <div class="result-card">
         <div id="resOK" class="hidden">
-          <div class="icon success">✅</div>
-          <h2>¡Pago Exitoso!</h2>
-          <p>Tu pedido ha sido procesado.</p>
+          <div class="icon success">✅</div><h2>¡Pago Exitoso!</h2><p>Tu pedido ha sido procesado.</p>
           <button class="btn-secondary full" onclick="verBoleta()" style="margin: 15px 0;">📄 Ver Boleta Digital</button>
         </div>
         <div id="resREJ" class="hidden"><div class="icon error">❌</div><h2>Pago Rechazado</h2><p>Intenta nuevamente.</p></div>
         <div id="resERR" class="hidden"><div class="icon warn">⚠️</div><h2>Error</h2><p>Problema técnico.</p></div>
-        <div class="actions">
-          <button class="btn-secondary" onclick="go('catalogo')">Inicio</button>
-          <button class="btn-primary" onclick="go('seguimiento')">Mis Pedidos</button>
-        </div>
+        <div class="actions"><button class="btn-secondary" onclick="go('catalogo')">Inicio</button><button class="btn-primary" onclick="go('seguimiento')">Ver mis Pedidos</button></div>
       </div>
     </section>
 
@@ -227,10 +223,7 @@
       <div id="bolItems" class="boleta-items"></div>
       <div class="boleta-divider">----------------</div>
       <div class="boleta-total"><p>TOTAL <span id="bolTotal"></span></p></div>
-      <div class="boleta-actions">
-        <button class="btn-primary full" onclick="window.print()">Imprimir</button>
-        <button class="btn-secondary full" onclick="cerrarBoleta()">Cerrar</button>
-      </div>
+      <div class="boleta-actions"><button class="btn-primary full" onclick="window.print()">Imprimir</button><button class="btn-secondary full" onclick="cerrarBoleta()">Cerrar</button></div>
     </div>
   </div>
 
