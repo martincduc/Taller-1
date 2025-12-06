@@ -153,7 +153,6 @@ function go(route) {
         if((r == route && a.innerText.toLowerCase().includes('tienda') && r == 'catalogo') || (r == route && a.innerText.toLowerCase().includes('pedidos') && r == 'seguimiento')) {
             a.classList.add('active'); 
         } else if (r == route) {
-            // logica simple
         } else {
             if(route == 'catalogo' && a.innerText.includes('Tienda')) a.classList.add('active');
             else if(route == 'seguimiento' && a.innerText.includes('Pedidos')) a.classList.add('active');
@@ -200,7 +199,6 @@ function pintarCatalogo() {
     card.style.animationDelay = `${index * 0.1}s`;
     
     const img = p.img || 'https://via.placeholder.com/300';
-    // FIX: Agregamos comillas simples al ID en las funciones onclick
     card.innerHTML = `
       <div class="pic"><img src="${img}"></div>
       <div class="card-body">
@@ -262,7 +260,6 @@ function pintarCarrito() {
     subtotal += p.precio * i.qty;
     const div = document.createElement("div"); div.className = "carrito-item";
     
-    // FIX: Comillas simples en los IDs
     div.innerHTML = `
       <img src="${p.img}">
       <div><div style="font-weight:700">${p.nombre}</div><div style="font-size:0.9rem; color:var(--text-light)">${money(p.precio)}</div></div>
@@ -343,7 +340,6 @@ $$(".pay-card").forEach(b => b.onclick = async () => {
   }, 2000); 
 });
 
-// NUEVA FUNCION DE BOLETA QUE GENERA EL HTML COMPLETO
 window.verBoleta = () => {
     const oid = localStorage.getItem("lr:lastOrder"); 
     const items = JSON.parse(localStorage.getItem("lr:tempOrderItems") || "[]"); 
@@ -385,10 +381,10 @@ window.verBoleta = () => {
            ${method === 'delivery' ? `<div class="item-row"><span class="item-name">DESPACHO A DOMICILIO</span><span>${money(3990)}</span></div>` : ''}
         </div>
 
-        <div class="boleta-totals">
+        <div class="boleta-total">
            <div class="info-line"><span>NETO:</span> <span>${money(neto)}</span></div>
            <div class="info-line"><span>IVA (19%):</span> <span>${money(iva)}</span></div>
-           <div class="boleta-total"><span>TOTAL:</span> <span>${money(total)}</span></div>
+           <div class="boleta-total" style="font-size:16px; margin-top:10px; border-top:1px dashed #000; padding-top:5px;"><span>TOTAL:</span> <span>${money(total)}</span></div>
         </div>
 
         <div class="boleta-footer">
@@ -413,8 +409,112 @@ $("#btnLogin").onclick = async () => { const btn = $("#btnLogin"); const e=$("#l
 $("#btnRegister").onclick = async () => { const btn = $("#btnRegister"); const n=$("#registerName").value; const e=$("#registerEmail").value; const p=$("#registerPassword").value; if(!n || !e || !p) return showToast("Faltan campos", "error"); const passRegex = /^(?=.*[A-Z])(?=.*\d).{5,}$/; if (!passRegex.test(p)) return showToast("La contraseña es muy débil", "error"); setLoading(btn, true); try { const res = await fetch(`${API_AUTH}/register`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:n, email:e, password:p}) }); if(res.ok) { showToast("Cuenta creada con éxito", "success"); $("#switchToLogin").click(); } else showToast("Error al registrar", "error"); } catch(err) { showToast("Error servidor", "error"); } finally { setLoading(btn, false); } };
 $("#switchToRegister").onclick = () => { $("#auth-login").classList.add("hidden"); $("#auth-register").classList.remove("hidden"); }; $("#switchToLogin").onclick = () => { $("#auth-register").classList.add("hidden"); $("#auth-login").classList.remove("hidden"); };
 
-async function loadMyOrders() { const list = $("#segHist"); list.innerHTML = "<li style='text-align:center; padding:1rem; color:var(--text-light)'>Cargando historial...</li>"; try { const res = await fetch(`${API_ORDERS}/mine`, { headers: { 'Authorization': `Bearer ${getToken()}` } }); const data = await res.json(); list.innerHTML = ""; if(!data.length) { $("#segEstado").innerText="Sin pedidos"; list.innerHTML="<li style='text-align:center; padding:2rem'>Aún no has realizado pedidos.</li>"; return; } const last = data[0]; $("#segEstado").innerText = `Último estado: ${last.status}`; const getStatusColor = (s) => s.includes('Pagado') ? 'var(--success)' : (s.includes('Rechazado') ? 'var(--danger)' : 'var(--warning)'); data.forEach(o => { const li = document.createElement("li"); li.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:center;"><strong>Pedido #${o.id}</strong><span style="background:${getStatusColor(o.status)}; color:white; padding:2px 8px; border-radius:10px; font-size:0.75rem;">${o.status}</span></div><div style="font-size:0.9rem; color:var(--text-light)">${new Date(o.createdAt).toLocaleDateString()} | ${money(o.total)} | ${o.deliveryMethod === 'pickup' ? '🏪 Retiro' : '🚚 Despacho'}</div>`; list.appendChild(li); }); } catch(e) { list.innerHTML = "Error al cargar historial"; } }
+// --- LISTA DE PEDIDOS BLINDADA CONTRA ERRORES ---
+async function loadMyOrders() { 
+    const list = $("#segHist"); 
+    list.innerHTML = "<li style='text-align:center; padding:1rem; color:var(--text-light)'>Cargando historial...</li>"; 
+    
+    try { 
+        const res = await fetch(`${API_ORDERS}/mine`, { headers: { 'Authorization': `Bearer ${getToken()}` } }); 
+        const data = await res.json(); 
+        list.innerHTML = ""; 
+        
+        if(!data.length) { 
+            $("#segEstado").innerText="Sin pedidos"; 
+            list.innerHTML="<li style='text-align:center; padding:2rem'>Aún no has realizado pedidos.</li>"; 
+            return; 
+        } 
+        
+        const last = data[0]; 
+        $("#segEstado").innerText = `Último estado: ${last.status}`; 
+        
+        const getStatusColor = (s) => {
+            if(s.includes('Pagado')) return 'var(--success)';
+            if(s.includes('Rechazado') || s.includes('Anulado')) return 'var(--danger)';
+            return 'var(--warning)';
+        };
+
+        data.forEach(o => { 
+            const li = document.createElement("li"); 
+            
+            // Lógica BLINDADA para recuperar nombres
+            let itemsHtml = '';
+            if(o.items && o.items.length > 0) {
+                itemsHtml = o.items.map(i => {
+                    let nombre = "Producto desconocido";
+                    
+                    // Caso A: El servidor envió el objeto completo (Ideal)
+                    if (i.product && typeof i.product === 'object' && i.product.nombre) {
+                        nombre = i.product.nombre;
+                    } 
+                    // Caso B: El servidor envió solo el ID (Fallback) -> Buscamos en local
+                    else if (i.product && typeof i.product === 'string') {
+                        const pLocal = productos.find(p => p.id === i.product || p._id === i.product);
+                        if (pLocal) nombre = pLocal.nombre;
+                    }
+
+                    return `<div>• ${i.qty} x ${nombre}</div>`;
+                }).join('');
+            } else {
+                itemsHtml = '<div>Sin detalles</div>';
+            }
+
+            const shortId = o.id.slice(-6).toUpperCase();
+            
+            // Botón ANULAR
+            const canCancel = o.status !== 'Anulado' && o.status !== 'Entregado';
+            const cancelButton = canCancel 
+                ? `<button onclick="anularPedido('${o.id}')" style="margin-left:auto; font-size:0.8rem; padding:6px 12px; background:white; border:1px solid var(--danger); color:var(--danger); border-radius:6px; cursor:pointer; font-weight:600; transition:0.2s">Anular Pedido</button>`
+                : '';
+
+            li.innerHTML = `
+                <div style="background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: var(--shadow-sm);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:10px;">
+                        <div>
+                            <strong style="font-size:1.1rem; color:var(--text)">Pedido #${shortId}</strong>
+                            <div style="font-size:0.8rem; color:var(--text-light); margin-top:2px;">${new Date(o.createdAt).toLocaleString()}</div>
+                        </div>
+                        <span style="background:${getStatusColor(o.status)}; color:white; padding:4px 12px; border-radius:20px; font-size:0.8rem; font-weight:700;">${o.status}</span>
+                    </div>
+                    
+                    <div style="margin-bottom:15px; color:var(--text-light); font-size:0.95rem; line-height:1.6;">
+                        ${itemsHtml}
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                         <div style="font-weight:700; font-size:1.1rem; color:var(--text)">Total: ${money(o.total)}</div>
+                         ${cancelButton}
+                    </div>
+                </div>`; 
+            list.appendChild(li); 
+        }); 
+    } catch(e) { 
+        console.error(e);
+        list.innerHTML = "Error al cargar historial"; 
+    } 
+}
 $("#btnActualizarSeg").onclick = loadMyOrders;
+
+window.anularPedido = async (id) => {
+    if(!confirm("¿Estás seguro de que quieres anular este pedido? Se restaurará el stock.")) return;
+    
+    try {
+        const res = await fetch(`${API_ORDERS}/${id}/cancel`, { 
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${getToken()}` } 
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            showToast("Pedido anulado correctamente", "success");
+            loadMyOrders(); 
+        } else {
+            showToast(data.error || "No se pudo anular (Reinicia el servidor)", "error");
+        }
+    } catch (e) {
+        showToast("Error de conexión (Reinicia el servidor)", "error");
+    }
+};
 
 const prevBtn = $('.carrusel-arrow.prev'); if(prevBtn) { let currentSlide = 0; const slides = $$('.carrusel-slide'); const totalSlides = slides.length; const moveSlide = (n) => { currentSlide = n; if(currentSlide<0) currentSlide=totalSlides-1; if(currentSlide>=totalSlides) currentSlide=0; $('#carruselInner').style.transform = `translateX(-${currentSlide*100}%)`; }; prevBtn.onclick = () => moveSlide(currentSlide-1); $('.carrusel-arrow.next').onclick = () => moveSlide(currentSlide+1); setInterval(() => moveSlide(currentSlide+1), 5000); }
 updateUserSection(); verifySession(); cargarProductos(); updateBadge();

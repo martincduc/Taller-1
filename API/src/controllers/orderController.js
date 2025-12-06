@@ -3,7 +3,6 @@ const { Order, Product } = require('../models');
 // 1. CREAR PEDIDO
 exports.createOrder = async (req, res) => {
   try {
-    // Recibimos nuevos datos: deliveryMethod y commune
     const { items, total, address, deliveryMethod, commune } = req.body;
     const userId = req.user.id;
 
@@ -21,7 +20,6 @@ exports.createOrder = async (req, res) => {
 
     const orderItems = items.map(i => ({ product: i.id, qty: i.qty, price: i.price }));
 
-    // Crear orden con los nuevos datos
     const order = await Order.create({
         user: userId,
         total,
@@ -39,17 +37,20 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-// 2. OBTENER MIS PEDIDOS
+// 2. OBTENER MIS PEDIDOS (MEJORADO)
 exports.getMyOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ user: req.user.id }).sort({ createdAt: -1 });
+    // AQUI ESTÁ LA MAGIA: .populate('items.product') trae los datos del pan/producto
+    const orders = await Order.find({ user: req.user.id })
+        .populate('items.product') 
+        .sort({ createdAt: -1 });
     res.json(orders);
   } catch (error) {
     res.status(500).json({ error: 'Error obteniendo pedidos' });
   }
 };
 
-// 3. ACTUALIZAR ESTADO (Pago)
+// 3. ACTUALIZAR ESTADO (Pago / Admin)
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -59,19 +60,10 @@ exports.updateOrderStatus = async (req, res) => {
     if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
 
     if (status === 'Pagado' && order.status !== 'Pagado') {
-        console.log(`Pago confirmado #${id}. Descontando stock...`);
+        // Descontar stock al pagar
         for (const item of order.items) {
-            const product = await Product.findById(item.product);
-            if (product) {
-                // Descontar
-                await Product.findByIdAndUpdate(item.product, { $inc: { stock: -item.qty } });
-            }
+            await Product.findByIdAndUpdate(item.product, { $inc: { stock: -item.qty } });
         }
-    }
-
-    // Devolución de stock si falla (opcional, buena práctica)
-    if ((status === 'Rechazado' || status === 'Error') && order.status === 'Pagado') {
-         // Lógica inversa si fuera necesaria
     }
 
     order.status = status;
@@ -80,5 +72,37 @@ exports.updateOrderStatus = async (req, res) => {
     res.json({ message: `Estado actualizado a ${status}` });
   } catch (error) {
     res.status(500).json({ error: 'Error actualizando' });
+  }
+};
+
+// 4. ANULAR PEDIDO (Usuario) - MEJORADO
+exports.cancelOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const order = await Order.findOne({ _id: id, user: userId });
+
+    if (!order) return res.status(404).json({ error: 'Pedido no encontrado' });
+
+    // Validar estados finales irreversibles
+    if (order.status === 'Anulado' || order.status === 'Entregado') {
+        return res.status(400).json({ error: 'Este pedido ya no se puede anular.' });
+    }
+
+    // Si estaba pagado, DEVOLVEMOS el stock
+    if (order.status === 'Pagado') {
+        for (const item of order.items) {
+            await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.qty } });
+        }
+    }
+
+    order.status = 'Anulado';
+    await order.save();
+
+    res.json({ message: 'Pedido anulado y stock restaurado', order });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error al anular el pedido' });
   }
 };

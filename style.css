@@ -305,3 +305,6 @@ button.mini:not(.btn-agregar-catalogo):hover { border-color: var(--text); color:
   .boleta-actions { display: none; }
   .boleta-ticket::before, .boleta-ticket::after { display: none; } /* Quitar bordes dentados al imprimir */
 }
+
+.history-list { list-style: none; padding: 0; margin: 0; }
+.history-list li button:hover { background: var(--danger) !important; color: white !important; }

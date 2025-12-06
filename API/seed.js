@@ -3,12 +3,12 @@ const { Product, Order, User } = require('./src/models');
 require('dotenv').config();
 
 const productos = [
-  { nombre: "Pan Molde Artesanal", precio: 4500, stock: 20, cat: "Pan", img: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500" },
-  { nombre: "Baguette Rústica", precio: 2800, stock: 15, cat: "Pan", img: "https://images.unsplash.com/photo-1549931319-a545dcf3bc73?w=500" },
-  { nombre: "Galletas de Avena", precio: 3200, stock: 50, cat: "Snacks", img: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=500" },
-  { nombre: "Brownie Vegano", precio: 2500, stock: 12, cat: "Snacks", img: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=500" },
-  { nombre: "Pack Desayuno", precio: 9990, stock: 5, cat: "Pack", img: "https://images.unsplash.com/photo-1608198093002-ad4e005484ec?w=500" },
-  { nombre: "Muffin Arándanos", precio: 1800, stock: 0, cat: "Snacks", img: "https://images.unsplash.com/photo-1558401391-7899b4bd5bbf?w=500" }
+  { nombre: "Pan Molde Artesanal", precio: 5890, stock: 20, cat: "Pan", img: "https://leonthebaker.com/cdn/shop/files/fit-bread-pan-de-proteinas-rebanado.jpg?v=1762259008&width=2497" },
+  { nombre: "Baguette Rústica", precio: 2190, stock: 15, cat: "Pan", img: "https://abmauri.es/wp-content/uploads/2019/04/baguete-rustica-pt.jpg" },
+  { nombre: "Galletas de Avena", precio: 3390, stock: 50, cat: "Snacks", img: "https://supermercado.eroski.es//images/26135657.jpg" },
+  { nombre: "Brownie Vegano", precio: 5490, stock: 12, cat: "Snacks", img: "https://jumbocl.vtexassets.com/arquivos/ids/367499-900-900?width=900&height=900&aspect=true" },
+  { nombre: "Pack Desayuno", precio: 30490, stock: 5, cat: "Pack", img: "https://desayunosadomicilioensantiago.cl/wp-content/uploads/2024/02/DADS_225.jpg" },
+  { nombre: "Muffin Arándanos", precio: 3990, stock: 0, cat: "Snacks", img: "https://www.kiosclub.com/cdn/shop/files/willowminiarandanoMesadetrabajo10-100.jpg?v=1757506941&width=900" }
 ];
 
 const seed = async () => {
