@@ -37,10 +37,10 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-// 2. OBTENER MIS PEDIDOS (MEJORADO)
+// 2. OBTENER MIS PEDIDOS 
 exports.getMyOrders = async (req, res) => {
   try {
-    // AQUI ESTÁ LA MAGIA: .populate('items.product') trae los datos del pan/producto
+
     const orders = await Order.find({ user: req.user.id })
         .populate('items.product') 
         .sort({ createdAt: -1 });
@@ -75,7 +75,7 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
-// 4. ANULAR PEDIDO (Usuario) - MEJORADO
+// 4. ANULAR PEDIDO (Usuario) 
 exports.cancelOrder = async (req, res) => {
   try {
     const { id } = req.params;
