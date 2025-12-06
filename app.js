@@ -14,7 +14,6 @@ const COMUNAS_RM = ["Cerrillos", "Cerro Navia", "Conchalí", "El Bosque", "Estac
 let shippingCost = 3990; 
 let deliveryMethod = 'delivery';
 
-// --- TOASTS ---
 function showToast(msg, type = 'info') {
   let c = $('.toast-container');
   if (!c) { c = document.createElement('div'); c.className = 'toast-container'; document.body.appendChild(c); }
@@ -54,11 +53,45 @@ const setCurrentUser = (u) => localStorage.setItem(CURRENT_USER_KEY, JSON.string
 const getToken = () => localStorage.getItem(TOKEN_KEY);
 const setToken = (t) => localStorage.setItem(TOKEN_KEY, t);
 
+function clearSensitiveFields() {
+  const ids = [
+    "loginEmail",
+    "loginPassword",
+    "registerName",
+    "registerEmail",
+    "registerPassword",
+    "registerConfirm",
+    "recEmail",
+    "recCode",
+    "recNewPass",
+    "profileName",
+    "profileEmail",
+    "addr",
+    "telefonoCheckout",
+    "q"
+  ];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === "SELECT") {
+      el.selectedIndex = 0;
+    } else {
+      el.value = "";
+    }
+  });
+  const comunaSelect = document.getElementById("comunaSelect");
+  if (comunaSelect) comunaSelect.selectedIndex = 0;
+}
+
 const logout = () => {
   localStorage.removeItem(CURRENT_USER_KEY);
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(LS_CART_KEY);
-  updateUserSection(); updateBadge(); showToast("Sesión cerrada correctamente", "info"); go('catalogo');
+  clearSensitiveFields();
+  updateUserSection();
+  updateBadge();
+  showToast("Sesión cerrada correctamente", "info");
+  go('catalogo');
 };
 
 async function verifySession() {
@@ -134,6 +167,7 @@ $("#btnResetPass").onclick = async () => {
             showToast("¡Contraseña actualizada!", "success");
             go('auth');
             $("#recovery-step1").classList.remove("hidden"); $("#recovery-step2").classList.add("hidden");
+            clearSensitiveFields();
         } else { const data = await res.json(); showToast(data.error || "Error al cambiar clave", "error"); }
     } catch(err) { showToast("Error de conexión", "error"); } finally { setLoading(btn, false); }
 };
@@ -287,7 +321,7 @@ window.modificarQty = (id, d) => {
 };
 window.eliminarItem = (id) => { const cart = getCart().filter(x=>x.id!=id); setCart(cart); pintarCarrito(); updateBadge(); };
 
-$("#btnConfirmarPedido").onclick = () => { if(!getCurrentUser()) { showToast("Necesitas iniciar sesión para comprar", "info"); go("auth"); } else go("checkout"); };
+$("#btnConfirmarPedido").onclick = () => { if(!getCurrentUser()) { showToast("Necesitas iniciar sesión para comprar", "info"); go("auth"); } else { clearSensitiveFields(); go("checkout"); } };
 
 function pintarCheckout() {
   const cart = getCart(); if(!cart.length) return go('carrito');
@@ -323,7 +357,7 @@ $("#goPasarela").onclick = async () => {
   try {
     const res = await fetch(API_ORDERS, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ total, address: addr, items, deliveryMethod, commune: com }) });
     const d = await res.json();
-    if(res.ok) { localStorage.setItem("lr:lastOrder", d.orderId); localStorage.setItem("lr:tempOrderItems", JSON.stringify(items)); localStorage.setItem("lr:tempOrderTotal", total); localStorage.setItem("lr:tempDeliveryMethod", deliveryMethod); $("#ordenId").innerText = "#" + d.orderId; await cargarProductos(); go("pasarela"); } else showToast(d.error || "Error al crear pedido", "error");
+    if(res.ok) { localStorage.setItem("lr:lastOrder", d.orderId); localStorage.setItem("lr:tempOrderItems", JSON.stringify(items)); localStorage.setItem("lr:tempOrderTotal", total); localStorage.setItem("lr:tempDeliveryMethod", deliveryMethod); $("#ordenId").innerText = "#" + d.orderId; await cargarProductos(); clearSensitiveFields(); go("pasarela"); } else showToast(d.error || "Error al crear pedido", "error");
   } catch(e) { showToast("Error de conexión", "error"); } finally { setLoading(btn, false); }
 };
 
@@ -347,7 +381,6 @@ window.verBoleta = () => {
     const method = localStorage.getItem("lr:tempDeliveryMethod"); 
     const user = getCurrentUser();
     
-    // Elementos calculados
     const neto = Math.round(total / 1.19);
     const iva = total - neto;
     const now = new Date();
@@ -405,11 +438,10 @@ window.verBoleta = () => {
 };
 window.cerrarBoleta = () => $("#modal-boleta").classList.add("hidden");
 
-$("#btnLogin").onclick = async () => { const btn = $("#btnLogin"); const e=$("#loginEmail").value; const p=$("#loginPassword").value; setLoading(btn, true); try { const res = await fetch(`${API_AUTH}/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:e, password:p}) }); const d = await res.json(); if(res.ok) { setToken(d.token); setCurrentUser(d.user); updateUserSection(); go('catalogo'); showToast(`Bienvenido, ${d.user.name}`, "success"); } else showToast(d.error, "error"); } catch(err) { showToast("Error servidor", "error"); } finally { setLoading(btn, false); } };
-$("#btnRegister").onclick = async () => { const btn = $("#btnRegister"); const n=$("#registerName").value; const e=$("#registerEmail").value; const p=$("#registerPassword").value; if(!n || !e || !p) return showToast("Faltan campos", "error"); const passRegex = /^(?=.*[A-Z])(?=.*\d).{5,}$/; if (!passRegex.test(p)) return showToast("La contraseña es muy débil", "error"); setLoading(btn, true); try { const res = await fetch(`${API_AUTH}/register`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:n, email:e, password:p}) }); if(res.ok) { showToast("Cuenta creada con éxito", "success"); $("#switchToLogin").click(); } else showToast("Error al registrar", "error"); } catch(err) { showToast("Error servidor", "error"); } finally { setLoading(btn, false); } };
+$("#btnLogin").onclick = async () => { const btn = $("#btnLogin"); const e=$("#loginEmail").value; const p=$("#loginPassword").value; setLoading(btn, true); try { const res = await fetch(`${API_AUTH}/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:e, password:p}) }); const d = await res.json(); if(res.ok) { setToken(d.token); setCurrentUser(d.user); clearSensitiveFields(); updateUserSection(); go('catalogo'); showToast(`Bienvenido, ${d.user.name}`, "success"); } else showToast(d.error, "error"); } catch(err) { showToast("Error servidor", "error"); } finally { setLoading(btn, false); } };
+$("#btnRegister").onclick = async () => { const btn = $("#btnRegister"); const n=$("#registerName").value; const e=$("#registerEmail").value; const p=$("#registerPassword").value; if(!n || !e || !p) return showToast("Faltan campos", "error"); const passRegex = /^(?=.*[A-Z])(?=.*\d).{5,}$/; if (!passRegex.test(p)) return showToast("La contraseña es muy débil", "error"); setLoading(btn, true); try { const res = await fetch(`${API_AUTH}/register`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:n, email:e, password:p}) }); if(res.ok) { showToast("Cuenta creada con éxito", "success"); clearSensitiveFields(); $("#switchToLogin").click(); } else showToast("Error al registrar", "error"); } catch(err) { showToast("Error servidor", "error"); } finally { setLoading(btn, false); } };
 $("#switchToRegister").onclick = () => { $("#auth-login").classList.add("hidden"); $("#auth-register").classList.remove("hidden"); }; $("#switchToLogin").onclick = () => { $("#auth-register").classList.add("hidden"); $("#auth-login").classList.remove("hidden"); };
 
-// --- LISTA DE PEDIDOS BLINDADA CONTRA ERRORES ---
 async function loadMyOrders() { 
     const list = $("#segHist"); 
     list.innerHTML = "<li style='text-align:center; padding:1rem; color:var(--text-light)'>Cargando historial...</li>"; 
@@ -436,23 +468,17 @@ async function loadMyOrders() {
 
         data.forEach(o => { 
             const li = document.createElement("li"); 
-            
-            // Lógica BLINDADA para recuperar nombres
             let itemsHtml = '';
             if(o.items && o.items.length > 0) {
                 itemsHtml = o.items.map(i => {
                     let nombre = "Producto desconocido";
-                    
-                    // Caso A: El servidor envió el objeto completo (Ideal)
                     if (i.product && typeof i.product === 'object' && i.product.nombre) {
                         nombre = i.product.nombre;
                     } 
-                    // Caso B: El servidor envió solo el ID (Fallback) -> Buscamos en local
                     else if (i.product && typeof i.product === 'string') {
                         const pLocal = productos.find(p => p.id === i.product || p._id === i.product);
                         if (pLocal) nombre = pLocal.nombre;
                     }
-
                     return `<div>• ${i.qty} x ${nombre}</div>`;
                 }).join('');
             } else {
@@ -460,8 +486,6 @@ async function loadMyOrders() {
             }
 
             const shortId = o.id.slice(-6).toUpperCase();
-            
-            // Botón ANULAR
             const canCancel = o.status !== 'Anulado' && o.status !== 'Entregado';
             const cancelButton = canCancel 
                 ? `<button onclick="anularPedido('${o.id}')" style="margin-left:auto; font-size:0.8rem; padding:6px 12px; background:white; border:1px solid var(--danger); color:var(--danger); border-radius:6px; cursor:pointer; font-weight:600; transition:0.2s">Anular Pedido</button>`

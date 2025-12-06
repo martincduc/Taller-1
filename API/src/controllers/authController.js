@@ -5,13 +5,13 @@ const jwt = require('jsonwebtoken');
 // 1. REGISTRO
 exports.register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, phoneNumber } = req.body;
     const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{5,}$/;
     if (!passwordRegex.test(password)) {
         return res.status(400).json({ error: 'Contraseña débil: Mín 5 chars, 1 Mayúscula, 1 Número.' });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashedPassword });
+    const user = await User.create({ name, email, password: hashedPassword, phoneNumber });
     res.status(201).json({ message: 'Usuario creado exitosamente' });
   } catch (error) {
     if (error.code === 11000) return res.status(400).json({ error: 'Correo ya registrado.' });
@@ -32,7 +32,7 @@ exports.login = async (req, res) => {
         process.env.JWT_SECRET || 'secreto_super_seguro_mongo', 
         { expiresIn: '2h' }
     );
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, phoneNumber: user.phoneNumber } });
   } catch (error) {
     res.status(500).json({ error: 'Error del servidor' });
   }
@@ -41,11 +41,11 @@ exports.login = async (req, res) => {
 // 3. ACTUALIZAR PERFIL (Protegido)
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { name, email, phoneNumber } = req.body;
     const userId = req.user.id; 
-    const user = await User.findByIdAndUpdate(userId, { name, email }, { new: true, runValidators: true });
+    const user = await User.findByIdAndUpdate(userId, { name, email, phoneNumber }, { new: true, runValidators: true });
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-    res.json({ message: 'Perfil actualizado', user: { id: user._id, name: user.name, email: user.email } });
+    res.json({ message: 'Perfil actualizado', user: { id: user._id, name: user.name, email: user.email, phoneNumber: user.phoneNumber } });
   } catch (error) {
     if (error.code === 11000) return res.status(400).json({ error: 'Ese correo ya está en uso.' });
     res.status(500).json({ error: 'Error al actualizar perfil' });
