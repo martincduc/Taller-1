@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Libre & Rico — Tienda</title>
+  <title>Libre & Rico — Panadería Sin Gluten</title>
   <link rel="stylesheet" href="./style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet">
   <script src="./app.js" defer></script>
 </head>
@@ -15,21 +15,21 @@
       <div class="logo">L&R</div>
       <div class="brand-text">
         <strong>Libre & Rico</strong>
-        <span>Panificados sin gluten</span>
+        <span>Artesanal & Gluten Free</span>
       </div>
     </div>
     <nav class="nav">
-      <a onclick="go('catalogo')" class="nav-link active">Catálogo</a>
-      <a onclick="go('seguimiento')" class="nav-link">Seguimiento</a>
+      <a onclick="go('catalogo')" class="nav-link active">Tienda</a>
+      <a onclick="go('seguimiento')" class="nav-link">Pedidos</a>
     </nav>
     <div class="actions">
       <div class="search">
-        <input id="q" placeholder="Buscar pan, galletas..."/>
+        <input id="q" placeholder="¿Qué se te antoja?"/>
         <button id="btnBuscar">🔍</button>
       </div>
       <div class="user-section" id="userSection"></div>
       <button class="cart-btn" onclick="go('carrito')">
-        <span style="font-size:18px">🛒</span> <span id="cartCount">0</span>
+        <span style="font-size:18px">🛍️</span> <span id="cartCount">0</span>
       </button>
     </div>
   </header>
@@ -39,16 +39,18 @@
       <div class="carrusel">
         <div class="carrusel-inner" id="carruselInner">
           <div class="carrusel-slide">
-            <img src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1200&q=80">
+            <img src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1400&q=80">
             <div class="carrusel-overlay">
-              <span class="tag">Artesanal & Seguro</span>
-              <h2 class="carrusel-title">Sabor real, cero gluten</h2>
-              <button class="carrusel-btn" onclick="go('catalogo')">Ver Productos</button>
+              <span class="tag">Recién Horneado</span>
+              <h2 class="carrusel-title">El sabor de verdad,<br>sin complicaciones.</h2>
+              <button class="carrusel-btn" onclick="document.getElementById('grid').scrollIntoView({behavior:'smooth'})">Ver Productos ↓</button>
             </div>
           </div>
         </div>
       </div>
+      
       <div class="toolbar">
+        <div style="font-weight:700; font-size:1.2rem; color:var(--text);">Nuestros Productos</div>
         <div class="filters">
           <select id="fCategoria"><option value="">Todas las Categorías</option></select>
           <select id="fDisponibilidad"><option value="">Estado: Todos</option><option value="stock">En Stock</option></select>
@@ -56,34 +58,40 @@
           <button id="aplicarFiltros">Filtrar</button>
         </div>
       </div>
+
       <div id="grid" class="grid"></div>
-      <div class="paginacion"><button id="prevPag">◀ Anterior</button><span id="pagInfo"></span><button id="nextPag">Siguiente ▶</button></div>
+      
+      <div class="paginacion">
+        <button id="prevPag">← Anterior</button>
+        <span id="pagInfo"></span>
+        <button id="nextPag">Siguiente →</button>
+      </div>
     </section>
 
     <section id="view-auth" class="view hidden">
       <div class="auth-container">
         <div class="auth-form" id="auth-login">
-          <h2>Bienvenido</h2>
-          <div class="form-group"><label>Correo</label><input type="email" id="loginEmail" class="form-control"></div>
+          <h2>¡Hola de nuevo! 👋</h2>
+          <div class="form-group"><label>Correo Electrónico</label><input type="email" id="loginEmail" class="form-control" placeholder="nombre@ejemplo.com"></div>
           <div class="form-group">
             <label>Contraseña</label>
-            <input type="password" id="loginPassword" class="form-control">
-            <div style="text-align:right; margin-top:5px;">
-                <a onclick="go('recovery')" style="font-size:0.85rem; color:var(--primary);">¿Olvidaste tu contraseña?</a>
+            <input type="password" id="loginPassword" class="form-control" placeholder="••••••••">
+            <div style="text-align:right; margin-top:8px;">
+                <a onclick="go('recovery')" style="font-size:0.85rem; color:var(--text-light); text-decoration:underline;">¿Olvidaste tu contraseña?</a>
             </div>
           </div>
-          <button class="btn-primary full" id="btnLogin">Iniciar Sesión</button>
-          <p class="auth-switch"><a id="switchToRegister">Crear cuenta</a></p>
+          <button class="btn-primary full" id="btnLogin" style="margin-top:1rem;">Iniciar Sesión</button>
+          <p class="auth-switch">¿Nuevo aquí? <a id="switchToRegister">Crea una cuenta</a></p>
         </div>
 
         <div class="auth-form hidden" id="auth-register">
-          <h2>Registro</h2>
-          <div class="form-group"><label>Nombre</label><input type="text" id="registerName" class="form-control"></div>
-          <div class="form-group"><label>Correo</label><input type="email" id="registerEmail" class="form-control"></div>
+          <h2>Únete a nosotros 🥖</h2>
+          <div class="form-group"><label>Nombre Completo</label><input type="text" id="registerName" class="form-control" placeholder="Juan Pérez"></div>
+          <div class="form-group"><label>Correo Electrónico</label><input type="email" id="registerEmail" class="form-control" placeholder="nombre@ejemplo.com"></div>
           <div class="form-group"><label>Contraseña</label><input type="password" id="registerPassword" class="form-control" placeholder="Mín 5 chars, 1 Mayus, 1 Num"></div>
-          <div class="form-group"><label>Confirmar</label><input type="password" id="registerConfirm" class="form-control"></div>
-          <button class="btn-primary full" id="btnRegister">Registrarme</button>
-          <p class="auth-switch"><a id="switchToLogin">Volver al login</a></p>
+          <div class="form-group"><label>Confirmar Contraseña</label><input type="password" id="registerConfirm" class="form-control"></div>
+          <button class="btn-primary full" id="btnRegister" style="margin-top:1rem;">Registrarme</button>
+          <p class="auth-switch">¿Ya tienes cuenta? <a id="switchToLogin">Inicia sesión</a></p>
         </div>
       </div>
     </section>
@@ -91,18 +99,18 @@
     <section id="view-recovery" class="view hidden">
       <div class="auth-container">
         <div class="auth-form" id="recovery-step1">
-          <h2>Recuperar Contraseña</h2>
-          <p class="muted">Ingresa tu correo para recibir un código.</p>
+          <h2>Recuperar Cuenta 🔐</h2>
+          <p class="muted" style="text-align:center; margin-bottom:1.5rem;">Ingresa tu correo para recibir un código de verificación.</p>
           <div class="form-group"><label>Correo</label><input type="email" id="recEmail" class="form-control"></div>
           <button class="btn-primary full" id="btnSendCode">Enviar Código</button>
-          <p class="auth-switch"><a onclick="go('auth')">Volver</a></p>
+          <p class="auth-switch"><a onclick="go('auth')">← Volver al login</a></p>
         </div>
 
         <div class="auth-form hidden" id="recovery-step2">
           <h2>Cambiar Contraseña</h2>
-          <p class="muted">Ingresa el código enviado a tu correo.</p>
-          <div class="form-group"><label>Código de verificación</label><input type="text" id="recCode" class="form-control" placeholder="Ej: 123456"></div>
-          <div class="form-group"><label>Nueva Contraseña</label><input type="password" id="recNewPass" class="form-control" placeholder="Nueva clave segura"></div>
+          <p class="muted" style="text-align:center;">Revisa tu correo (simulado).</p>
+          <div class="form-group"><label>Código de verificación</label><input type="text" id="recCode" class="form-control" placeholder="Ej: 123456" style="text-align:center; letter-spacing:5px; font-size:1.2rem;"></div>
+          <div class="form-group"><label>Nueva Contraseña</label><input type="password" id="recNewPass" class="form-control"></div>
           <button class="btn-primary full" id="btnResetPass">Confirmar Cambio</button>
         </div>
       </div>
@@ -110,11 +118,11 @@
 
     <section id="view-profile" class="view hidden">
       <div class="auth-container" style="max-width: 600px;">
-        <h2>Mi Perfil</h2>
-        <div class="box">
+        <div class="auth-form">
+          <h2>Mi Perfil 👤</h2>
           <div class="form-group"><label>Nombre</label><input type="text" id="profileName" class="form-control"></div>
           <div class="form-group"><label>Correo</label><input type="email" id="profileEmail" class="form-control"></div>
-          <div class="row" style="margin-top: 20px;">
+          <div class="row" style="margin-top: 2rem;">
             <button class="btn-secondary" onclick="go('catalogo')">Cancelar</button>
             <button class="btn-primary" id="btnSaveProfile">Guardar Cambios</button>
           </div>
@@ -124,92 +132,111 @@
 
     <section id="view-producto" class="view hidden">
       <div class="product-layout">
-        <div style="grid-column:1/-1;margin-bottom:10px;"><button class="btn-link" onclick="go('catalogo')">← Volver</button></div>
-        <div class="product-gallery"><div class="main-image-container"><img id="productoImg" src=""/><span id="productoBadge" class="badge-overlay"></span></div></div>
+        <div style="grid-column:1/-1;margin-bottom:0;"><button class="btn-link" onclick="go('catalogo')" style="font-weight:600; color:var(--text-light)">← Volver al catálogo</button></div>
+        <div class="product-gallery">
+          <div class="main-image-container">
+            <img id="productoImg" src=""/>
+            <span id="productoBadge" class="badge-overlay"></span>
+          </div>
+        </div>
         <div class="product-info">
           <span id="productoCategoria" class="category-tag"></span>
           <h1 id="productoNombre"></h1>
-          <div class="price-block"><span id="productoPrecio" class="big-price"></span><span id="productoStock" class="stock-pill"></span></div>
-          <div class="divider"></div>
           <p id="productoDesc" class="description-text"></p>
+          <div class="divider"></div>
+          <div class="price-block">
+            <span id="productoPrecio" class="big-price"></span>
+            <span id="productoStock" class="stock-pill"></span>
+          </div>
+          
           <div class="add-to-cart-box">
-            <div class="qty-wrapper"><label>Cantidad</label><div class="qty-control"><button id="qtyMenos">−</button><input type="number" id="productoQty" value="1" readonly/><button id="qtyMas">+</button></div></div>
-            <button class="btn-primary btn-lg" id="btnAgregarDetalle">Agregar al Carrito</button>
+            <div class="qty-wrapper">
+              <label style="font-weight:600;">Cantidad</label>
+              <div class="qty-control">
+                <button id="qtyMenos">−</button>
+                <input type="number" id="productoQty" value="1" readonly/>
+                <button id="qtyMas">+</button>
+              </div>
+            </div>
+            <button class="btn-primary btn-lg full" id="btnAgregarDetalle">Agregar al Carrito 🛒</button>
           </div>
         </div>
       </div>
     </section>
 
     <section id="view-carrito" class="view hidden">
-      <h2>Mi Carrito</h2>
+      <h2 style="font-size:2rem; margin-bottom:1.5rem;">Mi Carrito 🛒</h2>
       <div class="cart-layout">
         <div class="cart-items" id="carritoLista"></div>
         <div class="cart-summary">
-          <h3>Resumen</h3>
+          <h3 style="margin-top:0">Resumen</h3>
           <div class="summary-row"><span>Subtotal</span><span id="pillSubtotal">$0</span></div>
-          <div class="summary-row"><span>Envío</span><span id="pillDespacho">$0</span></div>
-          <div class="divider"></div>
+          <div class="summary-row"><span>Envío estimado</span><span id="pillDespacho">$0</span></div>
+          <div class="divider" style="margin:1rem 0"></div>
           <div class="summary-row total"><span>Total</span><span id="pillTotal">$0</span></div>
           <button class="btn-primary full" id="btnConfirmarPedido" style="margin-top:20px">Ir a Pagar</button>
-          <button class="btn-secondary full" onclick="go('catalogo')" style="margin-top:10px">Seguir comprando</button>
+          <button class="btn-secondary full" onclick="go('catalogo')" style="margin-top:10px; border:none; color:var(--text-light)">Seguir comprando</button>
         </div>
       </div>
     </section>
 
     <section id="view-checkout" class="view hidden">
-      <h2>Finalizar Compra</h2>
+      <h2 style="font-size:2rem; margin-bottom:1.5rem;">Finalizar Compra ✨</h2>
       <div class="two-col-grid">
         <div class="box">
-          <h3>1. Resumen del Pedido</h3>
-          <div id="resumenTxt" class="order-summary-text"></div>
+          <h3>1. Tu Pedido</h3>
+          <div id="resumenTxt" class="order-summary-text" style="background:var(--bg); padding:1rem; border-radius:8px;"></div>
         </div>
         <div class="box">
-          <h3>2. Método de Entrega</h3>
+          <h3>2. Datos de Entrega</h3>
           <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-            <label class="radio-card"><input type="radio" name="deliveryMethod" value="delivery" checked><span>🚚 Despacho a Domicilio (RM)</span></label>
-            <label class="radio-card"><input type="radio" name="deliveryMethod" value="pickup"><span>🏪 Retiro en Tienda (Gratis)</span></label>
+            <label class="radio-card"><input type="radio" name="deliveryMethod" value="delivery" checked><span>🚚 Despacho (RM)</span></label>
+            <label class="radio-card"><input type="radio" name="deliveryMethod" value="pickup"><span>🏪 Retiro (Gratis)</span></label>
           </div>
           <div id="deliveryFields">
-            <label>Comuna (Región Metropolitana)</label><select id="comunaSelect" class="form-control"><option value="">Selecciona tu comuna...</option></select>
-            <label style="margin-top:15px">Dirección (Calle y Número)</label><input id="addr" class="form-control" placeholder="Ej: Av. Providencia 1234, Depto 501"/>
+            <label>Comuna (RM)</label><select id="comunaSelect" class="form-control"><option value="">Selecciona...</option></select>
+            <label style="margin-top:15px">Dirección Exacta</label><input id="addr" class="form-control" placeholder="Calle, Número, Depto..."/>
           </div>
-          <div id="pickupInfo" class="hidden msg info"><p><strong>📍 Dirección de retiro:</strong><br>Av. Siempre Viva 123, Santiago Centro.<br>Horario: Lun-Vie 09:00 - 18:00</p></div>
-          <div class="checkout-total"><span>Total a pagar:</span><span id="ckTotal" class="total-amount">$0</span></div>
-          <div class="row end"><button class="btn-secondary" onclick="go('carrito')">Volver</button><button class="btn-primary" id="goPasarela">Confirmar y Pagar</button></div>
-          <div id="ckWarn" class="msg err hidden" style="margin-top:10px">Faltan datos de envío.</div>
+          <div id="pickupInfo" class="hidden msg info" style="background:#eff6ff; padding:1rem; border-radius:8px; color:#1e40af;"><p><strong>📍 Dirección de retiro:</strong><br>Av. Siempre Viva 123, Santiago Centro.<br>Lun-Vie 09:00 - 18:00</p></div>
+          
+          <div class="checkout-total"><span>Total final:</span><span id="ckTotal" class="total-amount">$0</span></div>
+          <div class="row end" style="justify-content:space-between; margin-top:1rem;">
+            <button class="btn-secondary" onclick="go('carrito')">Volver</button>
+            <button class="btn-primary" id="goPasarela">Pagar Ahora</button>
+          </div>
         </div>
       </div>
     </section>
 
     <section id="view-pasarela" class="view hidden">
       <div class="payment-container">
-        <h2>Pasarela de Pago Segura</h2>
-        <p>Estás pagando el pedido <strong id="ordenId">...</strong></p>
+        <h2>Pasarela de Pago Segura 🔒</h2>
+        <p>Estás pagando el pedido <strong id="ordenId" style="color:var(--primary)">...</strong></p>
         <div class="pay-options">
-          <button class="pay-card" data-result="AUTHORIZED">Webpay Plus (Crédito)</button>
-          <button class="pay-card" data-result="REJECTED">Redcompra (Débito)</button>
-          <button class="pay-card" data-result="ERROR">Transferencia Bancaria</button>
+          <button class="pay-card" data-result="AUTHORIZED">💳 Webpay Plus (Crédito)</button>
+          <button class="pay-card" data-result="REJECTED">💳 Redcompra (Débito)</button>
+          <button class="pay-card" data-result="ERROR">🏦 Transferencia</button>
         </div>
-        <p class="status-text">Estado: <span id="retornoText">Esperando selección...</span></p>
+        <p class="status-text" style="margin-top:1rem; color:var(--text-light)">Estado: <span id="retornoText">Esperando selección...</span></p>
       </div>
     </section>
 
     <section id="view-resultado" class="view hidden">
       <div class="result-card">
         <div id="resOK" class="hidden">
-          <div class="icon success">✅</div><h2>¡Pago Exitoso!</h2><p>Tu pedido ha sido procesado.</p>
+          <div class="icon success">🎉</div><h2>¡Pago Exitoso!</h2><p>Gracias por preferir Libre & Rico.</p>
           <button class="btn-secondary full" onclick="verBoleta()" style="margin: 15px 0;">📄 Ver Boleta Digital</button>
         </div>
-        <div id="resREJ" class="hidden"><div class="icon error">❌</div><h2>Pago Rechazado</h2><p>Intenta nuevamente.</p></div>
-        <div id="resERR" class="hidden"><div class="icon warn">⚠️</div><h2>Error</h2><p>Problema técnico.</p></div>
-        <div class="actions"><button class="btn-secondary" onclick="go('catalogo')">Inicio</button><button class="btn-primary" onclick="go('seguimiento')">Ver mis Pedidos</button></div>
+        <div id="resREJ" class="hidden"><div class="icon error">🚫</div><h2>Pago Rechazado</h2><p>Por favor intenta nuevamente.</p></div>
+        <div id="resERR" class="hidden"><div class="icon warn">⚠️</div><h2>Ocurrió un error</h2><p>Revisa tu conexión.</p></div>
+        <div class="actions"><button class="btn-secondary" onclick="go('catalogo')">Volver al Inicio</button><button class="btn-primary" onclick="go('seguimiento')">Mis Pedidos</button></div>
       </div>
     </section>
 
     <section id="view-seguimiento" class="view hidden">
-      <h2>Mis Pedidos</h2>
+      <h2 style="font-size:2rem; margin-bottom:1.5rem;">Historial de Pedidos 📦</h2>
       <div class="box">
-        <div class="header-row"><div class="pill" id="segEstado">Cargando...</div><button class="btn-sm" id="btnActualizarSeg">🔄 Actualizar</button></div>
+        <div class="header-row"><div class="pill" id="segEstado" style="font-weight:700">Cargando...</div><button class="btn-sm" id="btnActualizarSeg">🔄 Actualizar</button></div>
         <ul id="segHist" class="history-list"></ul>
       </div>
     </section>
@@ -229,11 +256,23 @@
 
   <footer class="footer">
     <div class="footer-content">
-      <div class="footer-col"><h3>Libre & Rico</h3><p>Panadería 100% sin gluten.</p></div>
-      <div class="footer-col"><h3>Enlaces</h3><a onclick="go('catalogo')">Catálogo</a></div>
-      <div class="footer-col"><h3>Contacto</h3><p>contacto@libreyrico.cl</p></div>
+      <div class="footer-col">
+        <h3>Libre & Rico</h3>
+        <p>Panadería artesanal 100% libre de gluten. Horneamos con amor todos los días.</p>
+      </div>
+      <div class="footer-col">
+        <h3>Enlaces Rápidos</h3>
+        <a onclick="go('catalogo')">Catálogo</a>
+        <a onclick="go('seguimiento')">Mis Pedidos</a>
+        <a onclick="go('auth')">Mi Cuenta</a>
+      </div>
+      <div class="footer-col">
+        <h3>Hablemos</h3>
+        <p>contacto@libreyrico.cl</p>
+        <p>+56 9 1234 5678</p>
+      </div>
     </div>
-    <div class="copy">© 2025 Libre & Rico</div>
+    <div class="copy">© 2025 Libre & Rico — Hecho con masa madre y código.</div>
   </footer>
 </body>
 </html>

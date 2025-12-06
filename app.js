@@ -19,14 +19,30 @@ function showToast(msg, type = 'info') {
   let c = $('.toast-container');
   if (!c) { c = document.createElement('div'); c.className = 'toast-container'; document.body.appendChild(c); }
   if (c.children.length > 2) c.firstChild.remove();
-  const t = document.createElement('div'); t.className = `toast ${type}`; t.innerText = msg;
+  
+  const t = document.createElement('div'); 
+  t.className = `toast ${type}`; 
+  t.innerText = msg;
   c.appendChild(t);
-  setTimeout(() => { t.classList.add('hiding'); t.addEventListener('animationend', () => { if(t.parentNode) t.parentNode.removeChild(t); }); }, 3000);
+  
+  setTimeout(() => { 
+    t.style.opacity = '0'; 
+    t.style.transform = 'translateY(10px)';
+    setTimeout(() => { if(t.parentNode) t.parentNode.removeChild(t); }, 300);
+  }, 3000);
 }
 
 function setLoading(btn, isLoading) {
-  if (isLoading) { btn.classList.add('btn-loading'); btn.disabled = true; } 
-  else { btn.classList.remove('btn-loading'); btn.disabled = false; }
+  if (isLoading) { 
+    btn.dataset.text = btn.innerText;
+    btn.innerText = "Procesando..."; 
+    btn.disabled = true; 
+    btn.style.opacity = 0.7;
+  } else { 
+    btn.innerText = btn.dataset.text || "Listo"; 
+    btn.disabled = false; 
+    btn.style.opacity = 1;
+  }
 }
 
 const CURRENT_USER_KEY = "lr:currentUser";
@@ -42,7 +58,7 @@ const logout = () => {
   localStorage.removeItem(CURRENT_USER_KEY);
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(LS_CART_KEY);
-  updateUserSection(); updateBadge(); showToast("Sesión cerrada", "info"); go('catalogo');
+  updateUserSection(); updateBadge(); showToast("Sesión cerrada correctamente", "info"); go('catalogo');
 };
 
 async function verifySession() {
@@ -56,8 +72,19 @@ async function verifySession() {
 function updateUserSection() {
   const sec = $("#userSection"); const user = getCurrentUser();
   if (user) {
-    sec.innerHTML = `<div class="user-menu"><div class="user-dropdown"><div class="user-avatar" onclick="toggleMenu(event)">${user.name.charAt(0).toUpperCase()}</div><div class="dropdown-menu hidden" id="userMenuDropdown"><button class="dropdown-item" onclick="go('profile')">👤 Mi Perfil</button><button class="dropdown-item" onclick="go('seguimiento')">📦 Mis Pedidos</button><button class="dropdown-item logout" onclick="logout()">🚪 Cerrar Sesión</button></div></div></div>`;
-  } else { sec.innerHTML = `<button class="btn-login" onclick="go('auth')">Ingresar</button>`; }
+    sec.innerHTML = `
+      <div class="user-menu">
+        <div class="user-avatar" onclick="toggleMenu(event)">${user.name.charAt(0).toUpperCase()}</div>
+        <div class="dropdown-menu hidden" id="userMenuDropdown">
+          <div style="padding: 10px 14px; font-weight:700; color:var(--primary); font-size:0.85rem;">Hola, ${user.name.split(' ')[0]}</div>
+          <button class="dropdown-item" onclick="go('profile')">👤 Mi Perfil</button>
+          <button class="dropdown-item" onclick="go('seguimiento')">📦 Mis Pedidos</button>
+          <button class="dropdown-item logout" onclick="logout()">🚪 Cerrar Sesión</button>
+        </div>
+      </div>`;
+  } else { 
+    sec.innerHTML = `<button class="btn-login" onclick="go('auth')">Iniciar Sesión</button>`; 
+  }
 }
 
 window.toggleMenu = (e) => { e.stopPropagation(); document.getElementById('userMenuDropdown').classList.toggle('hidden'); };
@@ -70,7 +97,7 @@ function loadProfile() {
 
 $("#btnSaveProfile").onclick = async () => {
     const btn = $("#btnSaveProfile"); const name = $("#profileName").value.trim(); const email = $("#profileEmail").value.trim(); const token = getToken();
-    if(!name || !email) return showToast("Completa campos", "error");
+    if(!name || !email) return showToast("Completa todos los campos", "error");
     setLoading(btn, true);
     try {
         const res = await fetch(`${API_AUTH}/profile`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ name, email }) });
@@ -80,58 +107,61 @@ $("#btnSaveProfile").onclick = async () => {
     } catch(err) { showToast("Error al actualizar", "error"); } finally { setLoading(btn, false); }
 };
 
-// --- LÓGICA RECUPERACIÓN DE CONTRASEÑA ---
 $("#btnSendCode").onclick = async () => {
     const btn = $("#btnSendCode");
     const email = $("#recEmail").value.trim();
     if(!email) return showToast("Ingresa tu correo", "error");
-    
     setLoading(btn, true);
     try {
         const res = await fetch(`${API_AUTH}/forgot-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email}) });
         const data = await res.json();
-        
         if(res.ok) {
-            // SIMULACIÓN: Mostrar el código aquí mismo para la demo
-            alert(`[SIMULACIÓN] Tu código de recuperación es: ${data.debugCode}`);
+            alert(`[SIMULACIÓN DE CORREO]\n\nTu código es: ${data.debugCode}\n\n(Cópialo para el siguiente paso)`);
             $("#recovery-step1").classList.add("hidden");
             $("#recovery-step2").classList.remove("hidden");
-            showToast("Código enviado", "success");
-        } else {
-            showToast(data.error, "error");
-        }
+            showToast("Código enviado a tu correo", "success");
+        } else { showToast(data.error, "error"); }
     } catch(err) { showToast("Error de conexión", "error"); } finally { setLoading(btn, false); }
 };
 
 $("#btnResetPass").onclick = async () => {
-    const btn = $("#btnResetPass");
-    const email = $("#recEmail").value.trim();
-    const code = $("#recCode").value.trim();
-    const newPassword = $("#recNewPass").value.trim();
-    
+    const btn = $("#btnResetPass"); const email = $("#recEmail").value.trim(); const code = $("#recCode").value.trim(); const newPassword = $("#recNewPass").value.trim();
     if(!code || !newPassword) return showToast("Faltan datos", "error");
-    
     setLoading(btn, true);
     try {
         const res = await fetch(`${API_AUTH}/reset-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, code, newPassword}) });
         if(res.ok) {
-            showToast("Contraseña cambiada. Inicia sesión.", "success");
+            showToast("¡Contraseña actualizada!", "success");
             go('auth');
-            // Reset forms
-            $("#recovery-step1").classList.remove("hidden");
-            $("#recovery-step2").classList.add("hidden");
-        } else {
-            const data = await res.json();
-            showToast(data.error || "Error al cambiar clave", "error");
-        }
+            $("#recovery-step1").classList.remove("hidden"); $("#recovery-step2").classList.add("hidden");
+        } else { const data = await res.json(); showToast(data.error || "Error al cambiar clave", "error"); }
     } catch(err) { showToast("Error de conexión", "error"); } finally { setLoading(btn, false); }
 };
 
 function go(route) {
   routes.forEach(r => {
-    const el = $("#view-" + r); if(el) el.classList.toggle("hidden", r !== route);
-    $$('.nav-link').forEach(a => { if(a.innerText.toLowerCase().includes(route) || (route=='catalogo' && a.innerText.includes('Catálogo'))) a.classList.add('active'); else a.classList.remove('active'); });
+    const el = $("#view-" + r);
+    if(el) {
+       if (r === route) {
+           el.classList.remove("hidden");
+           el.style.animation = 'fadeIn 0.4s ease';
+       } else {
+           el.classList.add("hidden");
+       }
+    }
+    $$('.nav-link').forEach(a => { 
+        if((r == route && a.innerText.toLowerCase().includes('tienda') && r == 'catalogo') || (r == route && a.innerText.toLowerCase().includes('pedidos') && r == 'seguimiento')) {
+            a.classList.add('active'); 
+        } else if (r == route) {
+            // logica simple
+        } else {
+            if(route == 'catalogo' && a.innerText.includes('Tienda')) a.classList.add('active');
+            else if(route == 'seguimiento' && a.innerText.includes('Pedidos')) a.classList.add('active');
+            else a.classList.remove('active');
+        }
+    });
   });
+  
   if (route === "catalogo") pintarCatalogo();
   if (route === "carrito") pintarCarrito();
   if (route === "checkout") pintarCheckout();
@@ -162,39 +192,57 @@ function pintarCatalogo() {
   if(q) arr = arr.filter(p => p.nombre.toLowerCase().includes(q)); if(c) arr = arr.filter(p => p.cat === c);
   const start = (pag-1)*pageSize; const items = arr.slice(start, start+pageSize);
   const grid = $("#grid"); grid.innerHTML = "";
-  if(!items.length) { grid.innerHTML = `<p>No hay productos.</p>`; return; }
-  items.forEach(p => {
-    const card = document.createElement("div"); card.className = "card";
+  if(!items.length) { grid.innerHTML = `<p style="grid-column:1/-1; text-align:center; padding:2rem; font-size:1.2rem; color:var(--text-light)">No encontramos productos 🥐</p>`; return; }
+  
+  items.forEach((p, index) => {
+    const card = document.createElement("div"); 
+    card.className = "card";
+    card.style.animationDelay = `${index * 0.1}s`;
+    
     const img = p.img || 'https://via.placeholder.com/300';
-    card.innerHTML = `<div class="pic"><img src="${img}"></div><div class="card-body"><h4>${p.nombre}</h4><div class="price">${money(p.precio)}</div><div class="stock ${p.stock>0?'ok':'agotado'}">${p.stock>0?'Stock: '+p.stock:'Agotado'}</div><div class="row"><button class="mini btn-agregar-catalogo" ${p.stock===0?'disabled':''} onclick="event.stopPropagation(); agregar(${p.id})">Agregar</button><button class="mini" onclick="event.stopPropagation(); verProducto(${p.id})">Ver</button></div></div>`;
-    card.onclick = () => verProducto(p.id); grid.appendChild(card);
+    // FIX: Agregamos comillas simples al ID en las funciones onclick
+    card.innerHTML = `
+      <div class="pic"><img src="${img}"></div>
+      <div class="card-body">
+        <h4>${p.nombre}</h4>
+        <div class="price">${money(p.precio)}</div>
+        <div class="stock ${p.stock>0?'ok':'agotado'}">${p.stock>0?'Stock: '+p.stock:'Agotado'}</div>
+        <div class="row">
+          <button class="mini btn-agregar-catalogo" ${p.stock===0?'disabled':''} onclick="event.stopPropagation(); agregar('${p.id}')">
+             ${p.stock===0 ? 'Sin Stock' : 'Agregar +'}
+          </button>
+          <button class="mini" onclick="event.stopPropagation(); verProducto('${p.id}')">Ver detalle</button>
+        </div>
+      </div>`;
+    card.onclick = () => verProducto(p.id); 
+    grid.appendChild(card);
   });
-  $("#pagInfo").innerText = `Pág ${pag}`;
+  $("#pagInfo").innerText = `Página ${pag}`;
 }
 
 $("#prevPag").onclick = () => { if(pag>1){pag--; pintarCatalogo()} }; $("#nextPag").onclick = () => { pag++; pintarCatalogo() }; $("#btnBuscar").onclick = $("#aplicarFiltros").onclick = () => { pag=1; pintarCatalogo() };
 
 function verProducto(id) {
   const p = productos.find(x => x.id == id); if(!p) return;
-  $("#productoNombre").innerText = p.nombre; $("#productoPrecio").innerText = money(p.precio); $("#productoDesc").innerText = p.descripcion || "Sin descripción"; $("#productoImg").src = p.img || ''; $("#productoCategoria").innerText = p.cat;
+  $("#productoNombre").innerText = p.nombre; $("#productoPrecio").innerText = money(p.precio); $("#productoDesc").innerText = p.descripcion || "Una deliciosa preparación artesanal, hecha con ingredientes seleccionados y libres de gluten."; $("#productoImg").src = p.img || ''; $("#productoCategoria").innerText = p.cat;
   const stockEl = $("#productoStock");
-  if (p.stock > 0) { stockEl.innerText = `Stock: ${p.stock}`; stockEl.className = 'stock-pill'; stockEl.style.background = '#dcfce7'; stockEl.style.color = '#166534'; }
-  else { stockEl.innerText = 'Agotado'; stockEl.className = 'stock-pill'; stockEl.style.background = '#fee2e2'; stockEl.style.color = '#991b1b'; }
+  if (p.stock > 0) { stockEl.innerText = `En Stock: ${p.stock} un.`; stockEl.className = 'stock-pill'; stockEl.style.background = '#dcfce7'; stockEl.style.color = '#166534'; }
+  else { stockEl.innerText = 'Producto Agotado'; stockEl.className = 'stock-pill'; stockEl.style.background = '#fee2e2'; stockEl.style.color = '#991b1b'; }
   $("#productoQty").value = 1;
   $("#qtyMenos").onclick = () => { let v = parseInt($("#productoQty").value); if(v > 1) $("#productoQty").value = v - 1; };
   $("#qtyMas").onclick = () => { let v = parseInt($("#productoQty").value); if(v < p.stock) $("#productoQty").value = v + 1; else showToast(`Solo quedan ${p.stock}`, "error"); };
   const btn = $("#btnAgregarDetalle"); btn.onclick = () => agregar(p.id, parseInt($("#productoQty").value));
-  if (p.stock === 0) { btn.disabled = true; btn.innerText = "Agotado"; } else { btn.disabled = false; btn.innerText = "Agregar al Carrito"; }
+  if (p.stock === 0) { btn.disabled = true; btn.innerText = "No disponible"; } else { btn.disabled = false; btn.innerText = "Agregar al Carrito 🛒"; }
   go('producto');
 }
 
 function agregar(id, qty=1) {
-  const p = productos.find(x => x.id == id); if (!p || p.stock === 0) return showToast("Agotado", "error");
+  const p = productos.find(x => x.id == id); if (!p || p.stock === 0) return showToast("Producto Agotado", "error");
   const cart = getCart(); const item = cart.find(x => x.id == id);
   if (item) {
-    if (item.qty + qty <= p.stock) { item.qty += qty; showToast("Actualizado", "success"); } else showToast(`Stock límite (${p.stock})`, "error");
+    if (item.qty + qty <= p.stock) { item.qty += qty; showToast("Carrito actualizado", "success"); } else showToast(`No puedes llevar más de ${p.stock}`, "error");
   } else {
-    if (qty <= p.stock) { cart.push({ id: p.id, qty }); showToast("Agregado", "success"); } else showToast(`Stock insuficiente`, "error");
+    if (qty <= p.stock) { cart.push({ id: p.id, qty }); showToast("¡Agregado al carrito!", "success"); } else showToast(`Stock insuficiente`, "error");
   }
   setCart(cart); updateBadge();
 }
@@ -206,14 +254,25 @@ function updateBadge() {
 
 function pintarCarrito() {
   const cart = getCart(); const list = $("#carritoLista"); list.innerHTML = "";
-  if(!cart.length) { list.innerHTML = `<div style="padding:2rem; text-align:center; color:#64748b">Vacío</div>`; $("#btnConfirmarPedido").disabled = true; return; }
+  if(!cart.length) { list.innerHTML = `<div style="padding:4rem; text-align:center; color:var(--text-light); display:flex; flex-direction:column; align-items:center; gap:10px;"> <span style="font-size:3rem">🛒</span> <p>Tu carrito está vacío.</p></div>`; $("#btnConfirmarPedido").disabled = true; return; }
   $("#btnConfirmarPedido").disabled = false;
   let subtotal = 0;
   cart.forEach(i => {
     const p = productos.find(x=>x.id==i.id); if(!p) return;
     subtotal += p.precio * i.qty;
     const div = document.createElement("div"); div.className = "carrito-item";
-    div.innerHTML = `<img src="${p.img}"><div><div style="font-weight:600">${p.nombre}</div><div style="font-size:0.9rem; color:#64748b">${money(p.precio)}</div></div><div class="qty-control" style="height:32px"><button onclick="modificarQty(${i.id}, -1)">−</button><input value="${i.qty}" readonly style="width:40px"><button onclick="modificarQty(${i.id}, 1)">+</button></div><div style="font-weight:700">${money(p.precio*i.qty)}</div><button onclick="eliminarItem(${i.id})" style="background:none; border:none; color:#ef4444; font-size:1.2rem">✕</button>`;
+    
+    // FIX: Comillas simples en los IDs
+    div.innerHTML = `
+      <img src="${p.img}">
+      <div><div style="font-weight:700">${p.nombre}</div><div style="font-size:0.9rem; color:var(--text-light)">${money(p.precio)}</div></div>
+      <div class="qty-control" style="height:36px; width:fit-content">
+        <button onclick="modificarQty('${i.id}', -1)" style="width:30px; height:30px; font-size:1rem">−</button>
+        <input value="${i.qty}" readonly style="width:30px; height:30px; font-size:0.9rem">
+        <button onclick="modificarQty('${i.id}', 1)" style="width:30px; height:30px; font-size:1rem">+</button>
+      </div>
+      <div style="font-weight:700; color:var(--primary)">${money(p.precio*i.qty)}</div>
+      <button onclick="eliminarItem('${i.id}')" style="background:none; border:none; color:var(--danger); font-size:1.2rem; cursor:pointer">🗑️</button>`;
     list.appendChild(div);
   });
   $("#pillSubtotal").innerText = money(subtotal);
@@ -226,12 +285,12 @@ window.modificarQty = (id, d) => {
   if(item && p) {
     const n = item.qty + d;
     if(n > 0 && n <= p.stock) { item.qty = n; setCart(cart); pintarCarrito(); updateBadge(); }
-    else if(n > p.stock) showToast(`Máximo (${p.stock})`, "error");
+    else if(n > p.stock) showToast(`Máximo disponible: ${p.stock}`, "error");
   }
 };
 window.eliminarItem = (id) => { const cart = getCart().filter(x=>x.id!=id); setCart(cart); pintarCarrito(); updateBadge(); };
 
-$("#btnConfirmarPedido").onclick = () => { if(!getCurrentUser()) { showToast("Inicia sesión", "info"); go("auth"); } else go("checkout"); };
+$("#btnConfirmarPedido").onclick = () => { if(!getCurrentUser()) { showToast("Necesitas iniciar sesión para comprar", "info"); go("auth"); } else go("checkout"); };
 
 function pintarCheckout() {
   const cart = getCart(); if(!cart.length) return go('carrito');
@@ -254,12 +313,12 @@ function pintarCheckout() {
 
 function updateCheckoutTotal() {
     const cart = getCart(); let sub = 0; cart.forEach(i => { const p = productos.find(x=>x.id==i.id); if(p) sub += p.precio*i.qty; });
-    $("#ckTotal").innerText = `${money(sub + shippingCost)} (${deliveryMethod === 'pickup' ? 'Retiro' : 'Despacho'})`;
+    $("#ckTotal").innerText = `${money(sub + shippingCost)}`;
 }
 
 $("#goPasarela").onclick = async () => {
   const btn = $("#goPasarela"); const addr = $("#addr").value.trim(); const com = $("#comunaSelect").value;
-  if (deliveryMethod === 'delivery' && (!addr || !com)) return showToast("Falta dirección/comuna", "error");
+  if (deliveryMethod === 'delivery' && (!addr || !com)) return showToast("Por favor ingresa tu dirección completa", "error");
   setLoading(btn, true); const token = getToken(); const cart = getCart();
   let subtotal = 0; cart.forEach(i => { const p = productos.find(x=>x.id==i.id); if(p) subtotal += p.precio*i.qty; });
   const total = subtotal + shippingCost;
@@ -267,13 +326,13 @@ $("#goPasarela").onclick = async () => {
   try {
     const res = await fetch(API_ORDERS, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ total, address: addr, items, deliveryMethod, commune: com }) });
     const d = await res.json();
-    if(res.ok) { localStorage.setItem("lr:lastOrder", d.orderId); localStorage.setItem("lr:tempOrderItems", JSON.stringify(items)); localStorage.setItem("lr:tempOrderTotal", total); localStorage.setItem("lr:tempDeliveryMethod", deliveryMethod); $("#ordenId").innerText = "#" + d.orderId; await cargarProductos(); go("pasarela"); } else showToast(d.error || "Error al crear", "error");
-  } catch(e) { showToast("Error conexión", "error"); } finally { setLoading(btn, false); }
+    if(res.ok) { localStorage.setItem("lr:lastOrder", d.orderId); localStorage.setItem("lr:tempOrderItems", JSON.stringify(items)); localStorage.setItem("lr:tempOrderTotal", total); localStorage.setItem("lr:tempDeliveryMethod", deliveryMethod); $("#ordenId").innerText = "#" + d.orderId; await cargarProductos(); go("pasarela"); } else showToast(d.error || "Error al crear pedido", "error");
+  } catch(e) { showToast("Error de conexión", "error"); } finally { setLoading(btn, false); }
 };
 
 $$(".pay-card").forEach(b => b.onclick = async () => {
   const res = b.dataset.result; const oid = localStorage.getItem("lr:lastOrder"); const token = getToken();
-  $("#retornoText").innerText = "Procesando..."; $$(".pay-card").forEach(c => c.style.pointerEvents = "none");
+  $("#retornoText").innerText = "Procesando pago con el banco..."; $$(".pay-card").forEach(c => c.style.pointerEvents = "none");
   let status = res==="AUTHORIZED" ? "Pagado" : (res==="REJECTED" ? "Rechazado" : "Error");
   if(oid) { try { await fetch(`${API_ORDERS}/${oid}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ status }) }); } catch(e){} }
   setTimeout(async () => {
@@ -281,23 +340,80 @@ $$(".pay-card").forEach(b => b.onclick = async () => {
     if (res === "AUTHORIZED") { await cargarProductos(); setCart([]); updateBadge(); $("#resOK").classList.remove("hidden"); $("#resREJ").classList.add("hidden"); $("#resERR").classList.add("hidden"); go("resultado"); }
     else if (res === "REJECTED") { $("#resOK").classList.add("hidden"); $("#resREJ").classList.remove("hidden"); $("#resERR").classList.add("hidden"); go("resultado"); }
     else { $("#resOK").classList.add("hidden"); $("#resREJ").classList.add("hidden"); $("#resERR").classList.remove("hidden"); go("resultado"); }
-  }, 1500);
+  }, 2000); 
 });
 
+// NUEVA FUNCION DE BOLETA QUE GENERA EL HTML COMPLETO
 window.verBoleta = () => {
-    const oid = localStorage.getItem("lr:lastOrder"); const items = JSON.parse(localStorage.getItem("lr:tempOrderItems") || "[]"); const total = localStorage.getItem("lr:tempOrderTotal"); const method = localStorage.getItem("lr:tempDeliveryMethod"); const user = getCurrentUser();
-    $("#bolOrden").innerText = "#" + oid; $("#bolCliente").innerText = user ? user.name : "Cliente"; $("#bolMetodo").innerText = method === 'pickup' ? 'Retiro en Tienda' : 'Despacho a Domicilio'; $("#bolTotal").innerText = money(parseInt(total || 0));
-    const cont = $("#bolItems"); cont.innerHTML = ""; items.forEach(i => { const p = productos.find(x => x.id == i.id); if(p) { const row = document.createElement("div"); row.className = "ticket-item"; row.innerHTML = `<span>${i.qty} x ${p.nombre}</span> <span>${money(i.price * i.qty)}</span>`; cont.appendChild(row); } });
-    const costoEnvio = method === 'pickup' ? 0 : 3990; const ship = document.createElement("div"); ship.className = "ticket-item"; ship.innerHTML = `<span>Envío/Retiro</span> <span>${money(costoEnvio)}</span>`; cont.appendChild(ship);
-    $("#modal-boleta").classList.remove("hidden");
+    const oid = localStorage.getItem("lr:lastOrder"); 
+    const items = JSON.parse(localStorage.getItem("lr:tempOrderItems") || "[]"); 
+    const total = parseInt(localStorage.getItem("lr:tempOrderTotal") || 0); 
+    const method = localStorage.getItem("lr:tempDeliveryMethod"); 
+    const user = getCurrentUser();
+    
+    // Elementos calculados
+    const neto = Math.round(total / 1.19);
+    const iva = total - neto;
+    const now = new Date();
+
+    const container = $("#modal-boleta");
+    container.innerHTML = `
+      <div class="boleta-ticket">
+        <div class="boleta-header">
+           <h2>LIBRE & RICO</h2>
+           <p>PANADERIA ARTESANAL SPA</p>
+           <p>77.123.456-8</p>
+           <p>AV. SIEMPRE VIVA 123, SANTIAGO</p>
+           <br>
+           <p><strong>BOLETA ELECTRÓNICA N° ${Math.floor(Math.random() * 100000)}</strong></p>
+           <p>S.I.I. - SANTIAGO CENTRO</p>
+        </div>
+
+        <div class="boleta-info">
+           <div class="info-line"><span>FECHA:</span> <span>${now.toLocaleDateString()} ${now.toLocaleTimeString()}</span></div>
+           <div class="info-line"><span>CLIENTE:</span> <span>${user ? user.name.toUpperCase() : "CLIENTE"}</span></div>
+           <div class="info-line"><span>ORDEN:</span> <span>#${oid}</span></div>
+           <div class="info-line"><span>ENTREGA:</span> <span>${method === 'pickup' ? 'RETIRO' : 'DESPACHO'}</span></div>
+        </div>
+
+        <div class="boleta-items">
+           <div class="tbl-header"><span>DESCRIPCION</span><span>TOTAL</span></div>
+           ${items.map(i => {
+               const p = productos.find(x => x.id == i.id);
+               return `<div class="item-row"><span class="item-name">${i.qty} x ${p ? p.nombre.toUpperCase() : 'ARTICULO'}</span><span>${money(i.price * i.qty)}</span></div>`;
+           }).join('')}
+           ${method === 'delivery' ? `<div class="item-row"><span class="item-name">DESPACHO A DOMICILIO</span><span>${money(3990)}</span></div>` : ''}
+        </div>
+
+        <div class="boleta-totals">
+           <div class="info-line"><span>NETO:</span> <span>${money(neto)}</span></div>
+           <div class="info-line"><span>IVA (19%):</span> <span>${money(iva)}</span></div>
+           <div class="boleta-total"><span>TOTAL:</span> <span>${money(total)}</span></div>
+        </div>
+
+        <div class="boleta-footer">
+           <div class="barcode"></div>
+           <p>TIMBRE ELECTRÓNICO SII</p>
+           <p>RES. 80 DE 2014 - VERIFIQUE EN WWW.SII.CL</p>
+           <p>¡GRACIAS POR SU PREFERENCIA!</p>
+        </div>
+
+        <div class="boleta-actions">
+           <button class="btn-print" onclick="window.print()">IMPRIMIR TICKET</button>
+           <button class="btn-close" onclick="document.getElementById('modal-boleta').classList.add('hidden')">CERRAR</button>
+        </div>
+      </div>
+    `;
+    
+    container.classList.remove("hidden");
 };
 window.cerrarBoleta = () => $("#modal-boleta").classList.add("hidden");
 
-$("#btnLogin").onclick = async () => { const btn = $("#btnLogin"); const e=$("#loginEmail").value; const p=$("#loginPassword").value; setLoading(btn, true); try { const res = await fetch(`${API_AUTH}/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:e, password:p}) }); const d = await res.json(); if(res.ok) { setToken(d.token); setCurrentUser(d.user); updateUserSection(); go('catalogo'); } else showToast(d.error, "error"); } catch(err) { showToast("Error servidor", "error"); } finally { setLoading(btn, false); } };
-$("#btnRegister").onclick = async () => { const btn = $("#btnRegister"); const n=$("#registerName").value; const e=$("#registerEmail").value; const p=$("#registerPassword").value; if(!n || !e || !p) return showToast("Faltan campos", "error"); const passRegex = /^(?=.*[A-Z])(?=.*\d).{5,}$/; if (!passRegex.test(p)) return showToast("Clave débil (Min 5, 1 Mayus, 1 Num)", "error"); setLoading(btn, true); try { const res = await fetch(`${API_AUTH}/register`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:n, email:e, password:p}) }); if(res.ok) { showToast("Registrado", "success"); $("#switchToLogin").click(); } else showToast("Error registro", "error"); } catch(err) { showToast("Error servidor", "error"); } finally { setLoading(btn, false); } };
+$("#btnLogin").onclick = async () => { const btn = $("#btnLogin"); const e=$("#loginEmail").value; const p=$("#loginPassword").value; setLoading(btn, true); try { const res = await fetch(`${API_AUTH}/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:e, password:p}) }); const d = await res.json(); if(res.ok) { setToken(d.token); setCurrentUser(d.user); updateUserSection(); go('catalogo'); showToast(`Bienvenido, ${d.user.name}`, "success"); } else showToast(d.error, "error"); } catch(err) { showToast("Error servidor", "error"); } finally { setLoading(btn, false); } };
+$("#btnRegister").onclick = async () => { const btn = $("#btnRegister"); const n=$("#registerName").value; const e=$("#registerEmail").value; const p=$("#registerPassword").value; if(!n || !e || !p) return showToast("Faltan campos", "error"); const passRegex = /^(?=.*[A-Z])(?=.*\d).{5,}$/; if (!passRegex.test(p)) return showToast("La contraseña es muy débil", "error"); setLoading(btn, true); try { const res = await fetch(`${API_AUTH}/register`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:n, email:e, password:p}) }); if(res.ok) { showToast("Cuenta creada con éxito", "success"); $("#switchToLogin").click(); } else showToast("Error al registrar", "error"); } catch(err) { showToast("Error servidor", "error"); } finally { setLoading(btn, false); } };
 $("#switchToRegister").onclick = () => { $("#auth-login").classList.add("hidden"); $("#auth-register").classList.remove("hidden"); }; $("#switchToLogin").onclick = () => { $("#auth-register").classList.add("hidden"); $("#auth-login").classList.remove("hidden"); };
 
-async function loadMyOrders() { const list = $("#segHist"); list.innerHTML = "<li>Cargando...</li>"; try { const res = await fetch(`${API_ORDERS}/mine`, { headers: { 'Authorization': `Bearer ${getToken()}` } }); const data = await res.json(); list.innerHTML = ""; if(!data.length) { $("#segEstado").innerText="Sin pedidos"; return; } const last = data[0]; $("#segEstado").innerText = `Último: ${last.status}`; const getStatusColor = (s) => s.includes('Pagado') ? 'var(--success)' : (s.includes('Rechazado') ? 'var(--danger)' : 'var(--warning)'); data.forEach(o => { const li = document.createElement("li"); li.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:4px"><strong>#${o.id}</strong><span style="color:${getStatusColor(o.status)}; font-weight:700">${o.status}</span></div><div style="font-size:0.9rem; color:#64748b">${new Date(o.createdAt).toLocaleDateString()} | ${money(o.total)} | ${o.deliveryMethod === 'pickup' ? '🏪 Retiro' : '🚚 Despacho'}</div>`; list.appendChild(li); }); } catch(e) { list.innerHTML = "Error al cargar"; } }
+async function loadMyOrders() { const list = $("#segHist"); list.innerHTML = "<li style='text-align:center; padding:1rem; color:var(--text-light)'>Cargando historial...</li>"; try { const res = await fetch(`${API_ORDERS}/mine`, { headers: { 'Authorization': `Bearer ${getToken()}` } }); const data = await res.json(); list.innerHTML = ""; if(!data.length) { $("#segEstado").innerText="Sin pedidos"; list.innerHTML="<li style='text-align:center; padding:2rem'>Aún no has realizado pedidos.</li>"; return; } const last = data[0]; $("#segEstado").innerText = `Último estado: ${last.status}`; const getStatusColor = (s) => s.includes('Pagado') ? 'var(--success)' : (s.includes('Rechazado') ? 'var(--danger)' : 'var(--warning)'); data.forEach(o => { const li = document.createElement("li"); li.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:center;"><strong>Pedido #${o.id}</strong><span style="background:${getStatusColor(o.status)}; color:white; padding:2px 8px; border-radius:10px; font-size:0.75rem;">${o.status}</span></div><div style="font-size:0.9rem; color:var(--text-light)">${new Date(o.createdAt).toLocaleDateString()} | ${money(o.total)} | ${o.deliveryMethod === 'pickup' ? '🏪 Retiro' : '🚚 Despacho'}</div>`; list.appendChild(li); }); } catch(e) { list.innerHTML = "Error al cargar historial"; } }
 $("#btnActualizarSeg").onclick = loadMyOrders;
 
 const prevBtn = $('.carrusel-arrow.prev'); if(prevBtn) { let currentSlide = 0; const slides = $$('.carrusel-slide'); const totalSlides = slides.length; const moveSlide = (n) => { currentSlide = n; if(currentSlide<0) currentSlide=totalSlides-1; if(currentSlide>=totalSlides) currentSlide=0; $('#carruselInner').style.transform = `translateX(-${currentSlide*100}%)`; }; prevBtn.onclick = () => moveSlide(currentSlide-1); $('.carrusel-arrow.next').onclick = () => moveSlide(currentSlide+1); setInterval(() => moveSlide(currentSlide+1), 5000); }
