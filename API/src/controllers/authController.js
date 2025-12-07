@@ -38,7 +38,7 @@ exports.login = async (req, res) => {
   }
 };
 
-// 3. ACTUALIZAR PERFIL (Protegido)
+// 3. ACTUALIZAR PERFIL 
 exports.updateProfile = async (req, res) => {
   try {
     const { name, email, phoneNumber } = req.body;
